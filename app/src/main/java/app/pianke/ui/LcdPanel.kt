@@ -42,7 +42,7 @@ fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, de
     fun style(size: Int, color: Color = LcdInk) = TextStyle(fontFamily = PiankeType.Lcd, fontSize = size.sp, color = color)
 
     Box(
-        Modifier.size(186.dp, 108.dp).background(Bezel, RoundedCornerShape(12.dp)).padding(4.dp)
+        Modifier.size(180.dp, 108.dp).background(Bezel, RoundedCornerShape(12.dp)).padding(4.dp)
             .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
         Column(
@@ -56,7 +56,7 @@ fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, de
                 style(11),
             )
             BasicText(
-                film.name.uppercase(), style = style(16), maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+                film.name.uppercase(), style = style(15), maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
             )
             LcdRow(
                 exposure?.let { shutterText(it) } ?: stringResource(R.string.lcd_exposure_none),

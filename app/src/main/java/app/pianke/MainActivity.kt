@@ -40,6 +40,7 @@ import app.pianke.camera.PreviewRenderer
 import app.pianke.film.FilmCatalog
 import app.pianke.ui.CameraScreen
 import app.pianke.ui.Ink
+import app.pianke.ui.LocalEdgeMargin
 import app.pianke.ui.MenuScreen
 import app.pianke.ui.PermissionGate
 import app.pianke.ui.REFERENCE_HEIGHT_DP
@@ -85,7 +86,12 @@ class MainActivity : ComponentActivity() {
                     availableWidth / REFERENCE_WIDTH_DP,
                     availableHeight / REFERENCE_HEIGHT_DP,
                 )
-                CompositionLocalProvider(LocalDensity provides Density(scale, density.fontScale)) {
+                // Height-limited screens are wider than the board: the film row reaches the physical right edge.
+                val edge = ((constraints.maxWidth / scale - REFERENCE_WIDTH_DP) / 2).coerceAtLeast(0f).dp
+                CompositionLocalProvider(
+                    LocalDensity provides Density(scale, density.fontScale),
+                    LocalEdgeMargin provides edge,
+                ) {
                     // Height-limited screens leave side margins; the board stays 390 wide and centred.
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                         Box(Modifier.width(REFERENCE_WIDTH_DP.dp).fillMaxHeight()) {
@@ -109,7 +115,7 @@ class MainActivity : ComponentActivity() {
         PermissionGate(state.permission, viewModel::onPermission) {
             Box {
                 CameraScreen(state, viewModel, preview, { rotation }) { menuOpen = true }
-                if (menuOpen) MenuScreen(state.settings, viewModel::updateSettings) { menuOpen = false }
+                if (menuOpen) MenuScreen(state.settings, app.feedback.shutterSoundForced, viewModel::updateSettings) { menuOpen = false }
             }
         }
     }

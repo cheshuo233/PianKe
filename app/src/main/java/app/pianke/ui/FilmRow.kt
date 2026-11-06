@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -39,12 +41,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -55,32 +56,69 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.pianke.R
 import app.pianke.film.Film
+import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.max
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val FAN_DEG = 30f
-private const val WINDOW_STEP_DP = 58f
-private const val DIAL_STEP_DP = 26f
+// ---- Rule 23: the fan geometry, the only place it is written. All lengths are dp on the 390 dp reference. ----
+// The dial's centre sits on the physical screen's right edge, at the row's vertical centre; the label wheel and
+// the window are concentric with it.
 
-// Geometry from canvas v38 (dp, reference 390 wide). The dial's centre is the pivot of the whole fan.
-private const val WINDOW_CENTER_X = 164f
-private const val WINDOW_CENTER_Y = 56f
+/** Row height; the dial (176) fits inside it without touching the zoom scale above or the bottom bar below. */
+const val FILM_ROW_HEIGHT_DP = 184f
+private const val DIAL_RADIUS = 88f
+
+private const val LABEL_W = 82f
+private const val LABEL_H = 75f
+
+/** Neighbouring labels clear each other by this much at their inner corners. */
+private const val LABEL_GAP = 3f
+
+private const val WINDOW_INNER = DIAL_RADIUS + 4f
+
+/** Radius of the label centres: the labels' inner edge sits 4 dp outside the window's inner edge. */
+private const val WHEEL_RADIUS = WINDOW_INNER + 4f + LABEL_W / 2
+
+/** The outer corners of a label are at hypot(WHEEL_RADIUS + 41, 37.5) = 181.9; the window adds 3 dp. */
+private const val WINDOW_OUTER = 185f
+
+/** The window's half height: the current label (+-37.5) shows fully, the neighbours only peek in at the tips. */
+private const val WINDOW_HALF_HEIGHT = 62f
+private const val PLATE_MARGIN = 4f
 
 /**
- * Rule 23, the only place for the fan: LCD slot, the arc label window, the half dial.
- * 30 degrees per film, labels and dial turn by the same angle; window drag 58 dp / dial drag 26 dp per step, snapping
- * on release; tap a visible neighbour or a dial half -> [onSelect] with +1 / -1; the list wraps. Each crossed step
- * calls [onSelect] with +1 or -1 (the ViewModel plays NOTCH and switches the LUT). Labels are loaded from
- * `film.labelAsset` once and cached by id.
+ * Step angle in degrees, derived from the radii: the angle at which the inner corners of two neighbouring labels are
+ * [LABEL_GAP] apart. With a = inner radial edge and h = half the label height, the corner of one label lies
+ * `a*sin(t) - h*cos(t) - h` from the side edge of the next, so t = atan(h / a) + asin((h + gap) / hypot(a, h)).
+ */
+private val STEP_DEG: Float = run {
+    val a = WHEEL_RADIUS - LABEL_W / 2
+    val h = LABEL_H / 2
+    Math.toDegrees((atan2(h, a) + asin((h + LABEL_GAP) / hypot(a, h))).toDouble()).toFloat()
+}
+
+/** Drag per step: the arc length of one step on the window at the label-centre radius, and on the dial at its rim. */
+private val WINDOW_STEP_DP: Float = (WHEEL_RADIUS * STEP_DEG * PI / 180).toFloat()
+private val DIAL_STEP_DP: Float = (DIAL_RADIUS * STEP_DEG * PI / 180).toFloat()
+
+/**
+ * The film row: LCD slot, the arc label window, the half dial. The row is laid out against the physical screen edge:
+ * it is [LocalEdgeMargin] wider than the centred board and overhangs it on the right.
+ *
+ * Labels sit on a wheel concentric with the dial, [STEP_DEG] apart, and turn rigidly with the dial by that angle per
+ * step. The window clips them to the arc band, so only the current label shows fully and the neighbours' corners peek
+ * in at the tips. Window drag [WINDOW_STEP_DP] / dial drag [DIAL_STEP_DP] per step, snapping on release; tap a visible
+ * neighbour or a dial half -> [onSelect] with +1 / -1; the list wraps. Each crossed step calls [onSelect] with +1 or -1
+ * (the ViewModel plays NOTCH and switches the LUT). Labels are loaded from `film.labelAsset` once and cached by id.
  */
 @Composable
 fun FilmRow(
@@ -99,7 +137,7 @@ fun FilmRow(
         }
     }
 
-    // `target` is the unwrapped film position the fan settles on; `shown` is the angle in films, animated or dragged.
+    // `target` is the unwrapped film position the wheel settles on; `shown` is the angle in films, animated or dragged.
     var target by remember { mutableIntStateOf(filmIndex) }
     var dragging by remember { mutableStateOf(false) }
     var dragStart by remember { mutableIntStateOf(0) }
@@ -127,25 +165,35 @@ fun FilmRow(
         onEnd = { dragging = false },
     )
 
-    Box(Modifier.fillMaxWidth().height(122.dp).clipToBounds()) {
-        Box(Modifier.offset(11.dp, 7.dp)) { lcd() }
+    val margin = LocalEdgeMargin.current
+    val width = 390.dp + margin
+    val cy = FILM_ROW_HEIGHT_DP / 2
+    // The row overhangs the board by `margin` on the right: shift it so its left edge stays on the board's.
+    Box(
+        Modifier.offset(margin / 2).requiredWidth(width).height(FILM_ROW_HEIGHT_DP.dp).clipToBounds(),
+    ) {
+        Box(Modifier.offset(8.dp, ((FILM_ROW_HEIGHT_DP - 108f) / 2).dp)) { lcd() }
 
         // The light metal plate round the window.
+        val plateOuter = WINDOW_OUTER + PLATE_MARGIN + 2f
+        val plateHalf = WINDOW_HALF_HEIGHT + PLATE_MARGIN
         Box(
-            Modifier.offset(222.dp, 1.dp).size(168.dp, 120.dp).clip(RingShape(168f, 60f, 66f, 168f))
+            Modifier.offset(width - plateOuter.dp, (cy - plateHalf).dp).size(plateOuter.dp, (2 * plateHalf).dp)
+                .ringClip(plateOuter, plateHalf, WINDOW_INNER - PLATE_MARGIN, plateOuter)
                 .background(Brush.verticalGradient(listOf(Color(0xFF8C8C88), Color(0xFFB6B6B2), Color(0xFFECECEA)))),
         )
 
-        // The label window: a ring band 70..164 dp from the dial centre, labels fanned on a 115 dp radius.
+        // The label window: the band WINDOW_INNER..WINDOW_OUTER round the dial centre, cut by the half height.
         val density = LocalDensity.current.density
         Box(
-            Modifier.offset(226.dp, 5.dp).size(125.dp, 112.dp)
-                .clip(RingShape(WINDOW_CENTER_X, WINDOW_CENTER_Y, 70f, 164f))
+            Modifier.offset(width - WINDOW_OUTER.dp, (cy - WINDOW_HALF_HEIGHT).dp)
+                .size(WINDOW_OUTER.dp, (2 * WINDOW_HALF_HEIGHT).dp)
+                .ringClip(WINDOW_OUTER, WINDOW_HALF_HEIGHT, WINDOW_INNER, WINDOW_OUTER)
                 .background(
                     Brush.radialGradient(
-                        0.427f to Color(0xFF111110), 0.683f to Color(0xFF262624), 1f to Color(0xFF141413),
-                        center = Offset(WINDOW_CENTER_X * density, WINDOW_CENTER_Y * density),
-                        radius = 164f * density,
+                        WINDOW_INNER / WINDOW_OUTER to Color(0xFF111110), 0.6f to Color(0xFF262624), 1f to Color(0xFF141413),
+                        center = Offset(WINDOW_OUTER * density, WINDOW_HALF_HEIGHT * density),
+                        radius = WINDOW_OUTER * density,
                     ),
                 )
                 .then(drag(WINDOW_STEP_DP)),
@@ -153,9 +201,8 @@ fun FilmRow(
             films.forEachIndexed { j, film ->
                 val d = wrapF(j - shown, n)
                 val a = abs(d)
-                val alpha = ((2f - a) / 0.4f).coerceIn(0f, 1f)
                 val bitmap = labels[film.id]
-                if (alpha > 0f && bitmap != null) {
+                if (a <= 2.2f && bitmap != null) {
                     val neighbour = a in 0.5f..1.5f
                     val pick = stringResource(R.string.film_pick_desc, film.name)
                     val brightness = 1f - 0.3f * minOf(a, 1f)
@@ -163,12 +210,13 @@ fun FilmRow(
                         bitmap, contentDescription = null, contentScale = ContentScale.FillBounds,
                         colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(brightness, brightness, brightness, 1f) }),
                         modifier = Modifier
-                            .offset(8.dp, 18.5.dp).size(82.dp, 75.dp)
-                            .zIndex(max(1, 20 - (a * 4).roundToInt()).toFloat())
+                            .offset((WINDOW_OUTER - WHEEL_RADIUS - LABEL_W / 2).dp, (WINDOW_HALF_HEIGHT - LABEL_H / 2).dp)
+                            .size(LABEL_W.dp, LABEL_H.dp)
+                            .zIndex(20f - a)
                             .graphicsLayer {
-                                rotationZ = -d * FAN_DEG
-                                transformOrigin = TransformOrigin(156f / 82f, 0.5f)
-                                this.alpha = alpha
+                                // Rigid rotation about the dial centre, which is (WHEEL_RADIUS + 41) right of the label's left edge.
+                                rotationZ = -d * STEP_DEG
+                                transformOrigin = TransformOrigin((WHEEL_RADIUS + LABEL_W / 2) / LABEL_W, 0.5f)
                             }
                             .border(1.dp, Color(0x29FFFFFF), RoundedCornerShape(2.dp))
                             .clickable(enabled = neighbour, role = Role.Button) { onSelect(if (d > 0) 1 else -1) }
@@ -177,38 +225,41 @@ fun FilmRow(
                 }
             }
             Canvas(Modifier.fillMaxSize().zIndex(30f)) {
-                val center = Offset(WINDOW_CENTER_X.dp.toPx(), WINDOW_CENTER_Y.dp.toPx())
-                val radius = 164.dp.toPx()
+                val center = Offset(WINDOW_OUTER.dp.toPx(), WINDOW_HALF_HEIGHT.dp.toPx())
+                val radius = WINDOW_OUTER.dp.toPx()
+                val inner = WINDOW_INNER / WINDOW_OUTER
                 drawRect(
                     Brush.radialGradient(
-                        0.427f to Color(0xD9000000), 0.482f to Color.Transparent,
-                        0.945f to Color.Transparent, 1f to Color(0xCC000000),
+                        inner to Color(0xD9000000), inner + 9f / WINDOW_OUTER to Color.Transparent,
+                        1f - 9f / WINDOW_OUTER to Color.Transparent, 1f to Color(0xCC000000),
                         center = center, radius = radius,
                     ),
                 )
                 drawRect(
                     Brush.verticalGradient(
-                        0f to Color(0xCC000000), 9f / 112f to Color.Transparent,
-                        105f / 112f to Color.Transparent, 1f to Color(0x8C000000),
+                        0f to Color(0xCC000000), 9f / (2 * WINDOW_HALF_HEIGHT) to Color.Transparent,
+                        1f - 9f / (2 * WINDOW_HALF_HEIGHT) to Color.Transparent, 1f to Color(0x8C000000),
                     ),
                 )
             }
         }
 
-        Dial(shown, drag(DIAL_STEP_DP), onPrev = { onSelect(-1) }, onNext = { onSelect(1) })
+        Box(Modifier.offset(width - DIAL_RADIUS.dp, (cy - DIAL_RADIUS).dp)) {
+            Dial(shown, drag(DIAL_STEP_DP), onPrev = { onSelect(-1) }, onNext = { onSelect(1) })
+        }
     }
 }
 
-/** The half dial: knurled rim and metal cap turn with the fan; its top half is "previous", the bottom half "next". */
+/** The half dial: knurled rim and metal cap turn with the wheel; its top half is "previous", the bottom half "next". */
 @Composable
 private fun Dial(shown: Float, drag: Modifier, onPrev: () -> Unit, onNext: () -> Unit) {
     val prev = stringResource(R.string.film_prev_desc)
     val next = stringResource(R.string.film_next_desc)
-    Box(Modifier.offset(334.dp, 5.dp).size(112.dp)) {
+    Box(Modifier.size((2 * DIAL_RADIUS).dp)) {
         Canvas(Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2, size.height / 2)
             drawCircle(Color(0xFFA5A5A1))
-            rotate(shown * FAN_DEG, center) {
+            rotate(shown * STEP_DEG, center) {
                 drawCircle(Color(0xFF8E8E8A))
                 repeat(90) { i ->
                     drawArc(Color(0xFFEDEDEB), i * 4f, 2f, useCenter = true)
@@ -228,7 +279,7 @@ private fun Dial(shown: Float, drag: Modifier, onPrev: () -> Unit, onNext: () ->
                         0.736f to Color(0xFFF6F6F4), 0.875f to Color(0xFFC4C4C0), 1f to Color(0xFFECECEA),
                         center = center,
                     ),
-                    radius = 49.dp.toPx(), center = center,
+                    radius = size.width / 2 * 0.875f, center = center,
                 )
             }
         }
@@ -279,18 +330,19 @@ private fun Modifier.stepDrag(
     }
 }
 
-/** A circular band clipped to its layer: dp coordinates of the circle centre, inner and outer radius. */
-private class RingShape(val cx: Float, val cy: Float, val inner: Float, val outer: Float) : Shape {
-    override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val d = density.density
-        val c = Offset(cx * d, cy * d)
-        val ring = Path.combine(
-            PathOperation.Difference,
-            Path().apply { addOval(Rect(c, outer * d)) },
-            Path().apply { addOval(Rect(c, inner * d)) },
-        )
-        return Outline.Generic(ring)
-    }
+/**
+ * Clips everything drawn after it (background, labels) to a circular band: the circle centre in dp (relative to the
+ * element), its inner and outer radius. Drawn through `clipPath`, so nothing escapes onto the neighbouring parts.
+ */
+private fun Modifier.ringClip(cx: Float, cy: Float, inner: Float, outer: Float): Modifier = drawWithCache {
+    val d = density
+    val centre = Offset(cx * d, cy * d)
+    val ring = Path.combine(
+        PathOperation.Difference,
+        Path().apply { addOval(Rect(centre, outer * d)) },
+        Path().apply { addOval(Rect(centre, inner * d)) },
+    )
+    onDrawWithContent { clipPath(ring) { this@onDrawWithContent.drawContent() } }
 }
 
 /** The shortest signed distance in films, in -n/2..n/2, for an integer difference. */

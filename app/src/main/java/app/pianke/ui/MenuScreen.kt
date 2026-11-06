@@ -61,7 +61,7 @@ private val CardMuted = Color(0xFF6E665A)
  * place that handles Back for About -> MENU -> viewfinder.
  */
 @Composable
-fun MenuScreen(settings: Settings, onUpdate: ((Settings) -> Settings) -> Unit, onClose: () -> Unit) {
+fun MenuScreen(settings: Settings, shutterSoundForced: Boolean, onUpdate: ((Settings) -> Settings) -> Unit, onClose: () -> Unit) {
     var about by rememberSaveable { mutableStateOf(false) }
     BackHandler { if (about) about = false else onClose() }
     val context = LocalContext.current
@@ -97,7 +97,7 @@ fun MenuScreen(settings: Settings, onUpdate: ((Settings) -> Settings) -> Unit, o
                 About(version)
             } else {
                 Header(stringResource(R.string.menu_title))
-                Groups(settings, version, onUpdate, openAbout = { about = true })
+                Groups(settings, shutterSoundForced, version, onUpdate, openAbout = { about = true })
                 Box(Modifier.weight(1f))
                 Footer(version)
             }
@@ -117,7 +117,7 @@ private fun Header(title: String) {
 }
 
 @Composable
-private fun Groups(settings: Settings, version: String, onUpdate: ((Settings) -> Settings) -> Unit, openAbout: () -> Unit) {
+private fun Groups(settings: Settings, shutterSoundForced: Boolean, version: String, onUpdate: ((Settings) -> Settings) -> Unit, openAbout: () -> Unit) {
     Group(R.string.menu_group_shoot_en, R.string.menu_group_shoot) {
         ValueRow(
             R.string.menu_framing,
@@ -141,7 +141,11 @@ private fun Groups(settings: Settings, version: String, onUpdate: ((Settings) ->
         ToggleRow(R.string.menu_halation, settings.halation) { on -> onUpdate { it.copy(halation = on) } }
     }
     Group(R.string.menu_group_feedback_en, R.string.menu_group_feedback) {
-        ToggleRow(R.string.menu_shutter_sound, settings.shutterSound) { on -> onUpdate { it.copy(shutterSound = on) } }
+        // A device that forces the shutter sound shows the row on and locked, with a note.
+        ToggleRow(
+            R.string.menu_shutter_sound, settings.shutterSound || shutterSoundForced,
+            enabled = !shutterSoundForced, note = if (shutterSoundForced) R.string.menu_shutter_sound_forced else null,
+        ) { on -> onUpdate { it.copy(shutterSound = on) } }
         ToggleRow(R.string.menu_vibration, settings.vibration) { on -> onUpdate { it.copy(vibration = on) } }
     }
     Group(R.string.menu_group_others_en, R.string.menu_group_others) {
@@ -161,12 +165,15 @@ private fun Group(en: Int, title: Int, rows: @Composable () -> Unit) {
 }
 
 @Composable
-private fun ToggleRow(label: Int, on: Boolean, onChange: (Boolean) -> Unit) {
+private fun ToggleRow(label: Int, on: Boolean, enabled: Boolean = true, note: Int? = null, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(44.dp).toggleable(on, role = Role.Switch, onValueChange = onChange),
+        Modifier.fillMaxWidth().height(44.dp).toggleable(on, enabled = enabled, role = Role.Switch, onValueChange = onChange),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicText(stringResource(label), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, color = CardInk))
+        Column {
+            BasicText(stringResource(label), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, color = CardInk))
+            if (note != null) BasicText(stringResource(note), style = TextStyle(fontSize = 11.sp, color = CardMuted))
+        }
         Box(Modifier.size(48.dp, 28.dp).background(if (on) Color(0xFFE2742B) else Color(0xFFD9D5CE), RoundedCornerShape(14.dp))) {
             Box(
                 Modifier.offset(if (on) 22.dp else 2.dp, 2.dp).size(24.dp).shadow(2.dp, CircleShape)

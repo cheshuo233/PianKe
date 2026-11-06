@@ -26,8 +26,6 @@
 
     <!-- Zoom ring -->
     <string name="zoom_to_desc">变焦到 %1$d 毫米</string>
-    <string name="zoom_wider_desc">拉远一档</string>
-    <string name="zoom_closer_desc">拉近一档</string>
 
     <!-- Film row and LCD -->
     <string name="lcd_iso">ISO %1$d</string>
@@ -79,6 +77,7 @@
     <string name="menu_grain_high">强</string>
     <string name="menu_halation">光晕</string>
     <string name="menu_shutter_sound">快门声</string>
+    <string name="menu_shutter_sound_forced">本机要求快门声</string>
     <string name="menu_vibration">震动</string>
     <string name="menu_about">关于片刻</string>
     <string name="menu_footer_name">片刻</string>

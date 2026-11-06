@@ -2,6 +2,7 @@ package app.pianke.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -28,6 +29,12 @@ object PiankeType {
 /** Canvas v38 is drawn 390 x 866 dp; MainActivity scales the whole UI by providing one LocalDensity. */
 const val REFERENCE_WIDTH_DP = 390f
 const val REFERENCE_HEIGHT_DP = 866f
+
+/**
+ * How far the physical screen extends past the centred board on each side (height-limited screens). Only the film
+ * row uses it, to put the dial's centre on the screen's right edge.
+ */
+val LocalEdgeMargin = compositionLocalOf { 0.dp }
 
 val Orange = Color(0xFFE8833A)
 val Ink = Color(0xFF1E1E1D)
