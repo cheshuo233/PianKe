@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.pianke.R
 import app.pianke.camera.CameraController
 import app.pianke.camera.PreviewRenderer
+import app.pianke.camera.ZoomScale
 import app.pianke.develop.DevelopQueue
 import app.pianke.develop.Developer
 import app.pianke.develop.KeptReason
@@ -20,6 +21,7 @@ import app.pianke.settings.Lens
 import app.pianke.settings.Roll
 import app.pianke.settings.Settings
 import app.pianke.settings.SettingsStore
+import app.pianke.settings.ZoomMode
 import app.pianke.settings.frame
 import app.pianke.settings.withFrame
 import kotlinx.coroutines.Dispatchers
@@ -158,6 +160,14 @@ class ShooterViewModel(
                         _state.update { it.copy(stops = stops, zoomRatio = 1f) }
                     }
                 }
+                launch {
+                    _state.map { it.settings.zoomMode }.distinctUntilChanged().collect { mode ->
+                        val s = _state.value
+                        if (mode == ZoomMode.STOPS && s.stops.isNotEmpty() && s.stop == null) {
+                            applyZoom(ZoomScale.nearest(s.stops, s.zoomRatio).ratio)
+                        }
+                    }
+                }
                 launch { camera.issue.collect { issue -> _state.update { it.copy(issue = issue) } } }
                 launch { camera.exposure.collect { e -> _state.update { it.copy(exposure = e) } } }
             }
@@ -204,7 +214,25 @@ class ShooterViewModel(
 
     /** Rules 28 and 29: clamps [ratio], ignores the current value, `setZoom`, then plays the cue for the crossing. */
     fun selectZoom(ratio: Float) {
-        TODO()
+        val before = _state.value
+        val stops = before.stops
+        if (stops.size <= 1) return
+        val new = ratio.coerceIn(stops.first().ratio, stops.last().ratio)
+        if (new == before.zoomRatio) return
+        applyZoom(new)
+        val cue = if (_state.value.stop?.ratio == new) {
+            Cue.NOTCH
+        } else {
+            ZoomScale.crossed(ZoomScale.mm(before.zoomRatio), ZoomScale.mm(new), ZoomScale.ticks(stops))
+                ?.let { if (it.marked) Cue.NOTCH else Cue.TICK }
+        }
+        if (cue != null) cue(cue)
+    }
+
+    /** Sets the ratio and tells the camera: the shared tail of [selectZoom] and the rule 31 snap. */
+    private fun applyZoom(ratio: Float) {
+        _state.update { it.copy(zoomRatio = ratio) }
+        camera?.setZoom(ratio)
     }
 
     /**

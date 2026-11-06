@@ -155,16 +155,20 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
                 style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.1.sp, color = Color(0xFFF28C3A)),
             )
         }
-        state.stop?.let { stop ->
-            val ratio = String.format(Locale.ROOT, "%.1f", stop.ratio).removeSuffix(".0")
-            BasicText(
-                stringResource(R.string.zoom_tag, stop.mm, stringResource(R.string.zoom_ratio, ratio), stringResource(zoomNoteRes(stop, front))),
-                Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 16.dp + mask)
-                    .semantics { liveRegion = LiveRegionMode.Polite }
-                    .background(Color(0x94141210), RoundedCornerShape(10.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
-                style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF3ECDD)),
-            )
-        }
+        val stop = state.stop
+        val ratio = String.format(Locale.ROOT, "%.1f", (stop?.ratio ?: state.zoomRatio)).removeSuffix(".0")
+        val ratioText = stringResource(R.string.zoom_ratio, ratio)
+        BasicText(
+            if (stop != null) {
+                stringResource(R.string.zoom_tag, stop.mm, ratioText, stringResource(zoomNoteRes(stop, front)))
+            } else {
+                stringResource(R.string.zoom_tag_free, state.focalMm, ratioText)
+            },
+            Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 16.dp + mask)
+                .semantics { liveRegion = LiveRegionMode.Polite }
+                .background(Color(0x94141210), RoundedCornerShape(10.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
+            style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF3ECDD)),
+        )
         state.issue?.let { issue ->
             BasicText(
                 stringResource(if (issue == CameraIssue.Fatal) R.string.issue_fatal else R.string.issue_in_use),
