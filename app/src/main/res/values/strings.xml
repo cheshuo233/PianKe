@@ -86,15 +86,13 @@
     <string name="menu_about">关于片刻</string>
     <string name="menu_footer_name">片刻</string>
     <string name="menu_footer_line">PIANKE 135 · v%1$s · OPEN SOURCE</string>
-    <string name="toggle_on">开</string>
-    <string name="toggle_off">关</string>
 
     <!-- About -->
     <string name="about_back_desc">返回</string>
     <string name="about_version">版本 %1$s</string>
     <string name="about_license">GPL-3.0</string>
     <string name="about_source">源码地址：%1$s</string>
-    <string name="about_source_url">（仓库建好后填写）</string>
+    <string name="about_source_url">https://github.com/cheshuo233/PianKe</string>
     <string name="about_credit">胶片模拟基于 spektrafilm 的光谱胶片模型，感谢其作者。</string>
     <string name="about_fonts">字体 Share Tech Mono 与 IBM Plex Mono 以 SIL OFL 授权，授权文本随应用一起打包。</string>
     <string name="about_trademark">胶片名称仅用于说明所模拟的胶片，商标归各自所有者。</string>

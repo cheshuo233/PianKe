@@ -1,5 +1,7 @@
 # 片刻 (pianke)
 
+源码：<https://github.com/cheshuo233/PianKe>
+
 片刻是一个 Android 胶片相机 App：取景时用 GPU 上的 LUT 加轻颗粒预览，按下快门后由 C 写的冲洗引擎（`engine/`，经 NDK 编译）把照片冲洗成所选胶片的样子，存进 `DCIM/Pianke`。胶片的色彩数据由 `tools/bake_films.py` 从 `films/films.toml` 烘焙而来，只有 `CAMERA` 一项权限，不联网。
 
 ## 构建前提
@@ -31,7 +33,7 @@ pwsh -NoProfile -File scripts\check.ps1
 pwsh -NoProfile -File scripts\install-hooks.ps1
 ```
 
-`check.ps1` 依次跑 `pytest tests/engine tests/assets`、（`films.toml` 或 `tools/` 相对上游有改动或没有上游时）`pytest tests/bake`，最后是 `gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`；任何一步失败即以非 0 退出，成功时最后一行是 `check passed`。JAVA_HOME 未设置时取注册表里 Android Studio 的 `jbr`。`install-hooks.ps1` 把它装成 `.git/hooks/pre-push`，重复运行无害。
+`check.ps1` 按规格 §11.6 依次跑各项检查，第一个失败即以非 0 退出（包括 `tools/.venv` 或 `gradlew.bat` 缺失），成功时最后一行是 `check passed`。JAVA_HOME 未设置时取注册表里 Android Studio 的 `jbr`。`install-hooks.ps1` 把它装成 `.git/hooks/pre-push`，重复运行无害。
 
 ## 插桩测试（HyperOS）
 

@@ -19,24 +19,18 @@
    - 在另一个 App（如系统相机）里打开相机，再切回片刻：取景区显示「相机被占用」；
    - 另一个 App 释放相机后，取景自动恢复，提示消失（`issue` 清空）；
    - 按 Home 进后台再返回，取景恢复，不需要重开。
+10. **变焦与后台返回**：拖到 115 mm，点相册缩略图（或按 Home、锁屏）再返回，取景的实际焦距仍是 115 mm（取景画面和上次一样大），刻度尺和取景角标仍是 115；再拍一张，EXIF 焦距为 115 mm 档。换到前置再换回后置，回到 23 mm。
 
-## 首次运行需确认
+## 首次运行仍待确认
 
-前面任务留下的、只能上真机确认的项：
+表里没有结果的项：
 
-- [ ] 取景的旋转、镜像和裁切：后置、前置各一遍，竖拍和 1:1 都看。
-- [ ] 着色器能否在设备 GPU 上编译（logcat 无 GL 错误，取景不是黑屏）。
-- [ ] LUT 和颗粒在取景里的观感（颗粒 关 / 弱 / 标准 / 强 四档）。
-- [ ] `RENDERMODE_WHEN_DIRTY` 下取景持续刷新，不卡帧。
-- [ ] 重绑一次（rebind-once）：造成可恢复错误时先重绑一次，再失败才显示「相机出错，请重开」。
-- [ ] 变焦范围：`CONTROL_ZOOM_RATIO_RANGE` 的实际范围，与第 1 条的档位对得上。
-- [ ] 存储已满时抛出的是哪种异常（`IOException` 的 cause 链里有没有 ENOSPC），LCD 是否显示「存储已满」，`DCIM/Pianke` 不残留。
-- [ ] EXIF Orientation 不是 6 的情形（2、3、4、5、7、8）：成片都被转正，Orientation 为 1。产生方法：后置竖拍通常得 6；把手机转到另外三个方向各拍一张，得 1、3、8；镜像值（2、4、5、7）如果会出现，只会来自前置镜头，在四个方向各拍一张。记下实际出现了哪些。
-- [ ] 两个插桩测试：`GoldenDevelopTest`（任务 4，JNI 胶水层此前从未真正执行）和 `DeveloperTest`（任务 7）。**已在 K90（Android 17）上通过：`OK (3 tests)`。** 运行方法：HyperOS 拒绝 `install -g`（INSTALL_GRANT_RUNTIME_PERMISSIONS），所以 `connectedDebugAndroidTest` 会跑出 0 个测试。改用 `adb install -r -t` 装 app 和 test 两个 APK（手机上确认安装提示），再运行 `adb shell am instrument -w -r app.pianke.test/androidx.test.runner.AndroidJUnitRunner`。
-- [ ] 闪光灯：后置 AUTO / 开 / 关真的各自生效（开时闪，关时不闪）；前置镜头上闪光灯按钮不可用，拍摄时不闪（任务 6）。
-- [ ] 拍摄尺寸：成片是不超过 4096×3072 的最大 4:3 尺寸（任务 6）。
-- [ ] Camera2 参数是否真的生效：记下 K90 列出了 EDGE_MODE_OFF、NOISE_REDUCTION_MODE_MINIMAL、TONEMAP sRGB 预设曲线中的哪几项（任务 6）。
-- [ ] LCD 的实时快门速度和光圈会随场景明暗更新，即曝光回调在这台设备上会触发。
+- [ ] E 重绑一次（rebind-once）：造成可恢复错误时先重绑一次，再失败才显示「相机出错，请重开」。
+- [ ] G 存储已满：抛出的异常的 cause 链里有 ENOSPC，LCD 显示「存储已满」，`DCIM/Pianke` 不残留，帧留在 `pending/`。
+- [ ] K 闪光灯：后置 AUTO / 开 / 关各自生效；前置镜头上闪光灯按钮不可用，拍摄时不闪。
+- [ ] 第 5 条权限。
+- [ ] 第 7 条内存峰值。
+- [ ] 第 10 条变焦与后台返回。
 
 ## 首次运行
 
@@ -65,3 +59,4 @@
 | L | 拍摄尺寸 | 通过 | 实测：3:4 为 3072×4096/4096×3072，1:1 为 3072×3072，前置 2448×3264 |
 | M | Camera2 参数 | 通过 | 设备列出：EDGE_MODE_OFF 与 NOISE_REDUCTION_MODE_MINIMAL 可用；TONEMAP 预设曲线不可用（只列出 CONTRAST_CURVE/FAST/HIGH_QUALITY），按规则未设置，阶段一用的是厂商色调曲线 |
 | N | LCD 实时快门与光圈 | 通过 | 读数随场景变化，如 1/100、1/25 |
+| 10 | 变焦与后台返回 | 待测 | 终审后补的修复（相机记住变焦并在 OPEN 时重设） |
