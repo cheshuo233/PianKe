@@ -75,7 +75,8 @@ class DevelopQueue(
     /** Startup recovery: enqueue without reservations; may exceed [CAPACITY]. */
     fun submitRecovered(shots: List<Shot>) = synchronized(lock) { shots.forEach(::enqueue) }
 
-    private fun enqueue(shot: Shot) = synchronized(lock) {
+    /** Callers hold [lock]. */
+    private fun enqueue(shot: Shot) {
         inFlightState.update { it + 1 }
         queued.trySend(shot).getOrThrow()
     }

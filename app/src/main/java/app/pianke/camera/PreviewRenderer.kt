@@ -4,7 +4,6 @@ import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
-import android.util.Log
 import android.view.Surface
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
@@ -15,9 +14,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * GLES 3.0 viewfinder: camera frame (OES) -> 3D LUT -> light grain, center-cropped to fill the view.
@@ -47,9 +43,7 @@ class PreviewRenderer : GLSurfaceView.Renderer {
     private var cameraWidth = 0
     private var cameraHeight = 0
     private var rotationDegrees = 0
-    private var residualRotation = 0
     private var mirrored = false
-    private var pendingLog: String? = null
     private var frame = 0
     private var surfaceTexture: SurfaceTexture? = null
     private val texMatrix = FloatArray(16)
@@ -139,10 +133,6 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         val st = surfaceTexture ?: return
         st.updateTexImage()
         st.getTransformMatrix(texMatrix)
-        pendingLog?.let {
-            Log.d(TAG, "$it texMatrix=${texMatrix.joinToString(",")}")
-            pendingLog = null
-        }
         updateViewToCamera()
 
         GLES30.glUseProgram(program)
@@ -182,20 +172,14 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         cameraHeight = resolution.height
         st.setDefaultBufferSize(resolution.width, resolution.height)
         val surface = Surface(st)
-        var logged = false // the listener fires again on every change; log only the first info of this request
         request.setTransformationInfoListener(DIRECT) { info ->
             post {
+                // Only the buffer's orientation is read here (to know whether width and height swap). The upright
+                // rotation itself is not ours: with a camera transform (always the case, the Surface is fed straight
+                // by the camera) the camera applies it, either in the buffer (back lens: identity matrix) or in
+                // getTransformMatrix (front lens: rotation and mirror). Rotating again would double it.
                 rotationDegrees = info.rotationDegrees
-                // With a camera transform the camera has already written the sensor orientation into the buffer, so
-                // uTexMatrix (SurfaceTexture.getTransformMatrix) carries that rotation. Rotating again would double it.
-                // The display is locked to rotation 0, where the camera transform is all of rotationDegrees; without a
-                // camera transform nothing is in the matrix and the whole rotationDegrees is ours to apply.
-                residualRotation = if (info.hasCameraTransform()) 0 else info.rotationDegrees
                 mirrored = info.isMirroring
-                if (!logged) {
-                    logged = true
-                    pendingLog = "rotationDegrees=${info.rotationDegrees} hasCameraTransform=${info.hasCameraTransform()} isMirroring=${info.isMirroring}"
-                }
             }
         }
         request.provideSurface(surface, DIRECT) { surface.release() }
@@ -203,7 +187,7 @@ class PreviewRenderer : GLSurfaceView.Renderer {
 
     /**
      * Center-crop: maps view coordinates (centered, y up) to camera-buffer coordinates (before the SurfaceTexture matrix),
-     * applying the part of the buffer's rotation that uTexMatrix does not already carry, and the front camera's mirroring.
+     * plus the front camera's mirroring.
      */
     private fun updateViewToCamera() {
         if (cameraWidth == 0 || viewHeight == 0) return
@@ -214,15 +198,9 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         val imageAspect = uprightW.toFloat() / uprightH
         val sx = if (viewAspect < imageAspect) viewAspect / imageAspect else 1f
         val sy = if (viewAspect < imageAspect) 1f else imageAspect / viewAspect
-        val theta = residualRotation * PI.toFloat() / 180f
-        val c = cos(theta)
-        val s = sin(theta)
-        val mx = if (mirrored) -sx else sx
-        // Column-major mat2: R(theta) * diag(mx, sy), R counter-clockwise (the inverse of the clockwise display rotation).
-        viewToCamera[0] = c * mx
-        viewToCamera[1] = s * mx
-        viewToCamera[2] = -s * sy
-        viewToCamera[3] = c * sy
+        // Column-major mat2: diag(+-sx, sy).
+        viewToCamera[0] = if (mirrored) -sx else sx
+        viewToCamera[3] = sy
     }
 
     private fun setSampling(target: Int, filter: Int) {
@@ -255,7 +233,6 @@ class PreviewRenderer : GLSurfaceView.Renderer {
     }
 
     private companion object {
-        const val TAG = "PiankePreview"
         const val POS_LOCATION = 0
         const val NOISE_TILE = 64
         const val NOISE_SEED = 1L
@@ -265,7 +242,7 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         const val VERTEX_SHADER = """#version 300 es
 in vec2 aPos;
 uniform mat4 uTexMatrix;       // SurfaceTexture.getTransformMatrix
-uniform mat2 uViewToCamera;    // center-crop, rotation to upright, front-camera mirroring
+uniform mat2 uViewToCamera;    // center-crop, front-camera mirroring
 out vec2 vCameraUv;
 void main() {
     vec2 uv = aPos * 0.5 + 0.5;

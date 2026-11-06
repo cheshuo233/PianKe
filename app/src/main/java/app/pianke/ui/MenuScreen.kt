@@ -64,7 +64,8 @@ private val CardMuted = Color(0xFF6E665A)
 @Composable
 fun MenuScreen(settings: Settings, shutterSoundForced: Boolean, onUpdate: ((Settings) -> Settings) -> Unit, onClose: () -> Unit) {
     var about by rememberSaveable { mutableStateOf(false) }
-    BackHandler { if (about) about = false else onClose() }
+    val back = { if (about) about = false else onClose() }
+    BackHandler(onBack = back)
     val context = LocalContext.current
     val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty() }
 
@@ -77,7 +78,7 @@ fun MenuScreen(settings: Settings, shutterSoundForced: Boolean, onUpdate: ((Sett
             Box(
                 Modifier.size(40.dp).shadow(4.dp, CircleShape).clip(CircleShape)
                     .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFECE9E3), Color(0xFFD7D3CC))))
-                    .clickable(role = Role.Button) { if (about) about = false else onClose() }
+                    .clickable(role = Role.Button, onClick = back)
                     .semantics { contentDescription = closeDescription },
                 contentAlignment = Alignment.Center,
             ) {

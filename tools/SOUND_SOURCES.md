@@ -7,4 +7,4 @@
 They are released under GPL-3.0 with the rest of the project.
 
 They can be replaced by recordings or CC0 samples. Keep the file names, 16-bit mono WAV, each at most 0.6 s,
-and set the loudness in the file itself: the app plays every sound at volume 1.0.
+and set the loudness in the file itself; the app scales it by the volume setting (0.3, 0.6 or 1.0).

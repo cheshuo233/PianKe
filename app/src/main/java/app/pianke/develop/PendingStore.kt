@@ -57,7 +57,6 @@ class PendingStore(private val dir: File) {
             val shot = try {
                 decode(id, Properties().also { props -> metaFile.inputStream().use(props::load) })
             } catch (e: Exception) {
-                log.warning("unreadable ${metaFile.name}: $e")
                 null
             }
             when {

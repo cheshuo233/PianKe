@@ -28,18 +28,6 @@ static const uint8_t SEGMENTS[10] = {
 };
 
 /* Digit width and stroke thickness for digit height h: the one place the glyph proportions live. */
-static int digit_width(int h);
-static int stroke(int h);
-
-/* Writes "'YY MM DD" (STAMP_TEXT_LEN chars + NUL) for date; every field is shown modulo 100. */
-static void format_date(const fe_date_t *date, char out[STAMP_TEXT_LEN + 1]);
-
-/* Paint the rectangle [x0,x1) x [y0,y1) orange, clipped to the image. */
-static void fill_rect(fe_image_t *image, int x0, int y0, int x1, int y1);
-
-/* Draw one glyph (digit, apostrophe or space) with its top-left at (x, y), digit height h. */
-static void draw_glyph(fe_image_t *image, int x, int y, int h, char ch);
-
 static int digit_width(int h)
 {
     return h * 5 / 9;
@@ -50,6 +38,7 @@ static int stroke(int h)
     return h / 8 > 1 ? h / 8 : 1;
 }
 
+/* Writes "'YY MM DD" (STAMP_TEXT_LEN chars + NUL) for date; every field is shown modulo 100. */
 static void format_date(const fe_date_t *date, char out[STAMP_TEXT_LEN + 1])
 {
     const unsigned fields[3] = {date->year % 100u, date->month % 100u, date->day % 100u};
@@ -65,6 +54,7 @@ static void format_date(const fe_date_t *date, char out[STAMP_TEXT_LEN + 1])
     out[n] = '\0';
 }
 
+/* Paint the rectangle [x0,x1) x [y0,y1) orange, clipped to the image. */
 static void fill_rect(fe_image_t *image, int x0, int y0, int x1, int y1)
 {
     x0 = x0 < 0 ? 0 : x0;
@@ -81,6 +71,7 @@ static void fill_rect(fe_image_t *image, int x0, int y0, int x1, int y1)
     }
 }
 
+/* Draw one glyph (digit, apostrophe or space) with its top-left at (x, y), digit height h. */
 static void draw_glyph(fe_image_t *image, int x, int y, int h, char ch)
 {
     const int w = digit_width(h), t = stroke(h), mid = h / 2;

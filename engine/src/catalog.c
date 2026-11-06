@@ -1,4 +1,4 @@
-/* films.bin reader (spec 4.2). The only C code that knows the file's byte offsets, and the only place
+/* films.bin reader (spec K1). The only C code that knows the file's byte offsets, and the only place
  * that turns its quantized fields (0..255, size x16) into the floats of fe_film_t. The parameter
  * bytes are passed on unchecked (each stage clamps the value it uses); only what could make the
  * engine read outside the blob is validated here.
@@ -40,17 +40,6 @@ struct fe_catalog {
 _Static_assert(sizeof(struct fe_catalog) + 65535u * sizeof(fe_film_t) <= (size_t)0xFFFFFFFFu,
                "catalog allocation size must fit in 32 bits");
 
-static uint16_t rd_u16(const uint8_t *p);
-static uint32_t rd_u32(const uint8_t *p);
-
-/* Validates the header (magic "FILM", version 1, film_count > 0, lut_size >= 2 so interpolation always
- * has a neighbour node to read) and that the entry table fits in the blob. FE_ERR_BAD_FILMS otherwise. */
-static fe_err_t parse_header(const uint8_t *blob, size_t size, size_t *film_count, uint8_t *lut_size);
-
-/* Validates entry `index` (id and name NUL terminated, so they are safe C strings; LUT inside the blob,
- * checked as `lut_bytes <= size && offset <= size - lut_bytes`) and fills *film. */
-static fe_err_t parse_entry(const uint8_t *blob, size_t size, size_t index, uint8_t lut_size, fe_film_t *film);
-
 static uint16_t rd_u16(const uint8_t *p)
 {
     return (uint16_t)(p[0] | (p[1] << 8));
@@ -61,6 +50,8 @@ static uint32_t rd_u32(const uint8_t *p)
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+/* Validates the header (magic "FILM", version 1, film_count > 0, lut_size >= 2 so interpolation always
+ * has a neighbour node to read) and that the entry table fits in the blob. FE_ERR_BAD_FILMS otherwise. */
 static fe_err_t parse_header(const uint8_t *blob, size_t size, size_t *film_count, uint8_t *lut_size)
 {
     if (size < HDR_SIZE || memcmp(blob + HDR_MAGIC, "FILM", 4) != 0 || rd_u16(blob + HDR_VERSION) != 1) {
@@ -77,6 +68,8 @@ static fe_err_t parse_header(const uint8_t *blob, size_t size, size_t *film_coun
     return FE_OK;
 }
 
+/* Validates entry `index` (id and name NUL terminated, so they are safe C strings; LUT inside the blob,
+ * checked as `lut_bytes <= size && offset <= size - lut_bytes`) and fills *film. */
 static fe_err_t parse_entry(const uint8_t *blob, size_t size, size_t index, uint8_t lut_size, fe_film_t *film)
 {
     const uint8_t *e = blob + HDR_SIZE + index * ENT_SIZE; /* index < count: inside the table checked above */

@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.util.Log
 import app.pianke.R
 
 enum class Cue { NOTCH, SHUTTER, ADVANCE, REWIND, REFUSE }
@@ -45,23 +44,15 @@ class Feedback(context: Context) {
     /** True when this device insists on a shutter sound; the single check also used by [play]. */
     val shutterSoundForced: Boolean = mustPlayShutterSound()
 
-    init {
-        Log.i(TAG, "shutterSoundForced=$shutterSoundForced")
-    }
-
     /**
      * [volume] (0..1) scales every sound this class plays through its own pool; the forced system shutter sound
      * goes through the system stream and is not scaled. That split is decided only here.
      */
     fun play(cue: Cue, sound: Boolean, vibration: Boolean, volume: Float) {
         if (cue == Cue.SHUTTER && shutterSoundForced) {
-            Log.i(TAG, "SHUTTER: MediaActionSound (forced)")
             forcedShutter.play(MediaActionSound.SHUTTER_CLICK)
         } else if (sound && audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-            if (cue == Cue.SHUTTER) Log.i(TAG, "SHUTTER: pool sound")
             sounds[cue]?.let { pool.play(it, volume, volume, 1, 0, 1f) }
-        } else if (cue == Cue.SHUTTER) {
-            Log.i(TAG, "SHUTTER: silent")
         }
         if (vibration) vibrator.vibrate(effect(cue))
     }
@@ -70,10 +61,6 @@ class Feedback(context: Context) {
     // way to ask, so those devices are treated as not forced.
     private fun mustPlayShutterSound(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && MediaActionSound.mustPlayShutterSound()
-
-    private companion object {
-        const val TAG = "PiankeFeedback"
-    }
 
     private fun effect(cue: Cue): VibrationEffect = when (cue) {
         Cue.NOTCH -> primitiveOr(VibrationEffect.Composition.PRIMITIVE_TICK, VibrationEffect.EFFECT_TICK)

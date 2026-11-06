@@ -139,7 +139,7 @@ JNIEXPORT void JNICALL Java_app_pianke_film_FilmEngine_develop(JNIEnv *env, jobj
     AndroidBitmapInfo info;
     void *pixels = NULL;
     if (AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS ||
-        info.format != ANDROID_BITMAP_FORMAT_RGBA_8888 || info.width > UINT16_MAX || info.height > UINT16_MAX ||
+        info.format != ANDROID_BITMAP_FORMAT_RGBA_8888 ||
         AndroidBitmap_lockPixels(env, bitmap, &pixels) != ANDROID_BITMAP_RESULT_SUCCESS) {
         throw_engine(env, FE_ERR_INVALID_ARG);
         return;

@@ -17,7 +17,6 @@
 typedef struct {
     uint32_t w, h;
 } thumb_dims_t;
-static thumb_dims_t thumb_dims(const fe_image_t *image);
 
 /* Bilinear sampling of an `cells`-wide map along one image axis of n pixels: sample i sits at map
  * coordinate (i + 0.5) * cells / n - 0.5, kept in Q8 and clamped to the map. Stepped from one pixel
@@ -28,24 +27,6 @@ typedef struct {
     uint32_t q, r;   /* quotient and remainder of ((2i + 1) * cells * 128) / n */
     uint32_t dq, dr; /* the same for the step 2 * cells * 128 */
 } axis_t;
-static void axis_init(axis_t *axis, uint32_t n, uint32_t cells);
-static void axis_next(axis_t *axis);
-/* Map cells i0 and i1 (= i0 + 1, or i0 at the far edge) and the weight of i1 in 0..255, for the current pixel. */
-static void axis_sample(const axis_t *axis, uint32_t *i0, uint32_t *i1, uint32_t *frac);
-
-/* Average image down to the energy map (dims.w x dims.h); pixels below the threshold count as 0. */
-static void gather_highlights(const fe_image_t *image, thumb_dims_t dims, uint8_t *thumb);
-
-/* One box-blur pass: `lines` lines of `len` cells; element i of line l is src[l * line_step + i * elem_step]. */
-static void blur_pass(const uint8_t *src, uint8_t *dst, size_t elem_step, size_t line_step, uint32_t lines,
-                      uint32_t len, unsigned radius);
-
-/* Box blur of the map, radius 0..255 in map cells (the window is clipped to the map, light that
- * leaves the map is lost); scratch is another dims.w * dims.h bytes. */
-static void blur_thumb(uint8_t *thumb, uint8_t *scratch, thumb_dims_t dims, unsigned radius);
-
-/* Add tint * glow * strength to every pixel (map sampled bilinearly), saturating. */
-static void composite_glow(fe_image_t *image, const uint8_t *thumb, thumb_dims_t dims, const fe_film_t *film);
 
 static thumb_dims_t thumb_dims(const fe_image_t *image)
 {
@@ -78,6 +59,7 @@ static void axis_next(axis_t *axis)
     }
 }
 
+/* Map cells i0 and i1 (= i0 + 1, or i0 at the far edge) and the weight of i1 in 0..255, for the current pixel. */
 static void axis_sample(const axis_t *axis, uint32_t *i0, uint32_t *i1, uint32_t *frac)
 {
     const uint32_t last = (axis->cells - 1u) * 256u;
@@ -90,6 +72,7 @@ static void axis_sample(const axis_t *axis, uint32_t *i0, uint32_t *i1, uint32_t
     *frac = pos & 255u;
 }
 
+/* Average image down to the energy map (dims.w x dims.h); pixels below the threshold count as 0. */
 static void gather_highlights(const fe_image_t *image, thumb_dims_t dims, uint8_t *thumb)
 {
     const uint32_t w = image->width, h = image->height;
@@ -127,6 +110,7 @@ static void gather_highlights(const fe_image_t *image, thumb_dims_t dims, uint8_
     }
 }
 
+/* One box-blur pass: `lines` lines of `len` cells; element i of line l is src[l * line_step + i * elem_step]. */
 static void blur_pass(const uint8_t *src, uint8_t *dst, size_t elem_step, size_t line_step, uint32_t lines,
                       uint32_t len, unsigned radius)
 {
@@ -147,12 +131,15 @@ static void blur_pass(const uint8_t *src, uint8_t *dst, size_t elem_step, size_t
     }
 }
 
+/* Box blur of the map, radius 0..255 in map cells (the window is clipped to the map, light that
+ * leaves the map is lost); scratch is another dims.w * dims.h bytes. */
 static void blur_thumb(uint8_t *thumb, uint8_t *scratch, thumb_dims_t dims, unsigned radius)
 {
     blur_pass(thumb, scratch, 1u, dims.w, dims.h, dims.w, radius);   /* along rows */
     blur_pass(scratch, thumb, dims.w, 1u, dims.w, dims.h, radius);   /* along columns */
 }
 
+/* Add tint * glow * strength to every pixel (map sampled bilinearly), saturating. */
 static void composite_glow(fe_image_t *image, const uint8_t *thumb, thumb_dims_t dims, const fe_film_t *film)
 {
     /* Per channel gain, Q16: strength (Q8, 0..256) * tint (0..255). */

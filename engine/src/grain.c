@@ -16,17 +16,6 @@
 #define GRAIN_DELTA_AT_PEAK 56  /* levels added at texture peak, strength 1, midtone weight 1 (sigma ~ 14 levels) */
 #define GRAIN_WEIGHT_FLOOR 32   /* midtone weight at luma 0 and 255, of 255 */
 
-static uint32_t rng_next(uint32_t *state);
-
-/* Fill tex (GRAIN_TEX_DIM^2) with tileable zero-mean noise whose blobs are ~size_px pixels wide
- * (size_px is already scaled to the image: grain_size * short side / GRAIN_REF_SHORT_SIDE); below 1 px
- * is a 1 px box. Always the same texture for the same size_px. */
-static void make_texture(int16_t *tex, float size_px);
-
-/* 0..255, peak at mid luma, GRAIN_WEIGHT_FLOOR at 0 and 255: Review Focus 2 needs grain to push pure
- * black and white against the clamp, so the weight must not reach 0. */
-static unsigned midtone_weight(unsigned luma);
-
 static uint32_t rng_next(uint32_t *state)
 {
     uint32_t x = *state; /* xorshift32 */
@@ -57,6 +46,9 @@ static void blur_lines(int16_t *tex, size_t elem_step, size_t line_step, const i
     }
 }
 
+/* Fill tex (GRAIN_TEX_DIM^2) with tileable zero-mean noise whose blobs are ~size_px pixels wide
+ * (size_px is already scaled to the image: grain_size * short side / GRAIN_REF_SHORT_SIDE); below 1 px
+ * is a 1 px box. Always the same texture for the same size_px. */
 static void make_texture(int16_t *tex, float size_px)
 {
     const size_t count = (size_t)GRAIN_TEX_DIM * GRAIN_TEX_DIM;
@@ -100,6 +92,8 @@ static void make_texture(int16_t *tex, float size_px)
     }
 }
 
+/* 0..255, peak at mid luma, GRAIN_WEIGHT_FLOOR at 0 and 255: grain must push pure black and
+ * white against the clamp too, so the weight must not reach 0. */
 static unsigned midtone_weight(unsigned luma)
 {
     /* Parabola 4 l (255 - l) / 255^2, peak 1 at mid luma, lifted from the floor to 255. */

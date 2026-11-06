@@ -1,7 +1,7 @@
 """Synthesizes the four feedback sounds into app/src/main/res/raw/*.wav.
 
 Deterministic: fixed parameters and a per-sound seed derived from SEED, so a re-run gives byte-identical files.
-Loudness lives in the generators: the app plays every sound at volume 1.0.
+Loudness lives in the generators; the app scales them by the volume setting.
 Usage: tools/.venv/Scripts/python tools/gen_sounds.py
 """
 import wave

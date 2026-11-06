@@ -1,4 +1,4 @@
-"""films.bin: the only Python implementation of the format (spec 4.2).
+"""films.bin: the only Python implementation of the format (spec K1).
 
 Writer: tools/bake_films.py. Reader on the device: film_engine's catalog (C).
 Everything that knows byte offsets, struct layouts or the LUT index order lives here;
@@ -39,9 +39,9 @@ class FilmEntry:
     id: str                                   # ASCII, <= 23 chars
     name: str                                 # UTF-8, <= 31 bytes
     grain_strength: int                       # 0..255 <-> 0..1
-    grain_size_q4: int                        # grain diameter in pixels * 16, >= 1
+    grain_size_q4: int                        # grain diameter in pixels at a 768 px short side, * 16
     halation_strength: int                    # 0..255 <-> 0..1
-    halation_radius: int                      # in pixels of a 96x96 thumbnail
+    halation_radius: int                      # in cells of the highlight map (long side 96 cells)
     halation_tint: tuple[int, int, int]
     lut: np.ndarray                           # (33, 33, 33, 3) uint8, indexed [r][g][b]
 
@@ -71,8 +71,7 @@ def read_films_bin(path: str | PathLike[str]) -> list[FilmEntry]:
 
 def write_films_bin(path: str | PathLike[str], entries: list[FilmEntry]) -> None:
     """Write entries in order and compute every lut_offset. Raises ValueError for what struct would
-    silently get wrong: an id empty or longer than 23 bytes, a name longer than 31 UTF-8 bytes,
-    grain_size_q4 < 1 (the engine divides by it). Byte fields outside 0..255 raise struct.error."""
+    silently get wrong: an id empty or longer than 23 bytes, a name longer than 31 UTF-8 bytes. Byte fields outside 0..255 raise struct.error."""
     lut_start = HEADER_STRUCT.size + len(entries) * ENTRY_STRUCT.size
     chunks = [HEADER_STRUCT.pack(_MAGIC, _VERSION, len(entries), LUT_SIZE)]
     luts = []
@@ -82,8 +81,6 @@ def write_films_bin(path: str | PathLike[str], entries: list[FilmEntry]) -> None
             raise ValueError(f"film id must be 1..23 ASCII bytes: {e.id!r}")
         if len(name) > 31:
             raise ValueError(f"film name must be <= 31 UTF-8 bytes: {e.name!r}")
-        if e.grain_size_q4 < 1:
-            raise ValueError(f"{e.id}: grain_size_q4 must be >= 1")
         chunks.append(ENTRY_STRUCT.pack(
             id_, name, e.grain_strength, e.grain_size_q4, e.halation_strength, e.halation_radius,
             *e.halation_tint, lut_start + i * _LUT_BYTES))
