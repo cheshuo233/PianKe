@@ -119,7 +119,7 @@ private val DIAL_STEP_DP: Float = (DIAL_RADIUS * STEP_DEG * PI / 180).toFloat()
  * step. The window clips them to the arc band, so only the current label shows fully and the neighbours' corners peek
  * in at the tips. Window drag [WINDOW_STEP_DP] / dial drag [DIAL_STEP_DP] per step, snapping on release; tap a visible
  * neighbour or a dial half -> [onSelect] with +1 / -1; the list wraps. Each crossed step calls [onSelect] with +1 or -1
- * (the ViewModel plays NOTCH and switches the LUT). Labels are loaded from `film.labelAsset` once and cached by id.
+ * (the ViewModel plays NOTCH and switches the LUT). A tap on the current label calls [onOpen] (the film drawer). Labels are loaded from `film.labelAsset` once and cached by id.
  */
 @Composable
 fun FilmRow(
@@ -127,6 +127,7 @@ fun FilmRow(
     filmIndex: Int,
     lcd: @Composable () -> Unit,
     onSelect: (delta: Int) -> Unit,
+    onOpen: () -> Unit,
 ) {
     val n = films.size
     val context = LocalContext.current
@@ -243,7 +244,7 @@ fun FilmRow(
                                 transformOrigin = TransformOrigin((WHEEL_RADIUS + LABEL_W / 2) / LABEL_W, 0.5f)
                             }
                             .border(1.dp, Color(0x29FFFFFF), RoundedCornerShape(2.dp))
-                            .clickable(enabled = neighbour, role = Role.Button) { tapStep(if (d > 0) 1 else -1) }
+                            .clickable(role = Role.Button) { if (neighbour) tapStep(if (d > 0) 1 else -1) else onOpen() }
                             .semantics { if (neighbour) contentDescription = pick },
                     )
                 }

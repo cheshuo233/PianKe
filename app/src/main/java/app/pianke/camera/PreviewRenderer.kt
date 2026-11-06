@@ -1,5 +1,6 @@
 package app.pianke.camera
 
+import android.graphics.PointF
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES30
@@ -48,6 +49,13 @@ class PreviewRenderer : GLSurfaceView.Renderer {
     private var surfaceTexture: SurfaceTexture? = null
     private val texMatrix = FloatArray(16)
     private val viewToCamera = FloatArray(4)
+
+    /** Rule 33: the center-crop factors, written by [updateViewToCamera] on the GL thread, read by [viewToFrame] on main. */
+    @Volatile
+    private var cropX = 1f
+
+    @Volatile
+    private var cropY = 1f
     private val quad = ByteBuffer.allocateDirect(QUAD.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().put(QUAD)
 
     /** Supplies the OES SurfaceTexture's Surface to CameraX at the requested resolution. */
@@ -201,7 +209,15 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         // Column-major mat2: diag(+-sx, sy).
         viewToCamera[0] = if (mirrored) -sx else sx
         viewToCamera[3] = sy
+        cropX = sx
+        cropY = sy
     }
+
+    /**
+     * Rule 33: view-normalised ([x], [y]) -> the frame coordinates `CameraController.focusAt` takes, using the same
+     * [cropX] and [cropY] as the shader; null until the frame size is known. Main thread.
+     */
+    fun viewToFrame(x: Float, y: Float): PointF? = TODO()
 
     private fun setSampling(target: Int, filter: Int) {
         GLES30.glTexParameteri(target, GLES30.GL_TEXTURE_MIN_FILTER, filter)

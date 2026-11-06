@@ -5,10 +5,7 @@ enum class StopKind { NATIVE, CROP, DIGITAL }
 data class ZoomStop(val mm: Int, val ratio: Float, val kind: StopKind)
 
 object ZoomStops {
-    /** The 23 mm main lens is ratio 1; every back stop's ratio is mm / MAIN_MM, written only here. */
-    private const val MAIN_MM = 23f
-
-    /** Rule 17: the stop kinds live only here. */
+    /** Rule 17: the stop kinds live only here; the ratio comes from [ZoomScale.ratio]. */
     val BACK: List<ZoomStop> = listOf(
         18 to StopKind.NATIVE,
         23 to StopKind.NATIVE,
@@ -18,7 +15,7 @@ object ZoomStops {
         115 to StopKind.NATIVE,
         135 to StopKind.CROP,
         200 to StopKind.DIGITAL,
-    ).map { (mm, kind) -> ZoomStop(mm, mm / MAIN_MM, kind) }
+    ).map { (mm, kind) -> ZoomStop(mm, ZoomScale.ratio(mm.toFloat()), kind) }
 
     /** The front camera has one stop: its own 35 mm-equivalent focal length at ratio 1. */
     fun front(mm: Int): List<ZoomStop> = listOf(ZoomStop(mm, 1f, StopKind.NATIVE))

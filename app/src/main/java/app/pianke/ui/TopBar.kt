@@ -38,12 +38,14 @@ import app.pianke.R
 import app.pianke.settings.FlashMode
 import app.pianke.settings.Roll
 
-/** MENU key, the counter drum (`n/36`), and the flash button (disabled while [flashEnabled] is false: front lens). */
+/** MENU key, the counter drum (`n/36`, rule 41), and the flash button (disabled while [flashEnabled] is false: front lens). */
 @Composable
 fun TopBar(
     frame: Int,
     flash: FlashMode,
     flashEnabled: Boolean,
+    counterShown: Boolean,
+    rewinding: Boolean,
     onMenu: () -> Unit,
     onFlash: () -> Unit,
 ) {
@@ -66,13 +68,14 @@ fun TopBar(
                 ),
             )
         }
-        CounterDrum(frame)
+        if (counterShown) CounterDrum(frame, rewinding)
         FlashButton(flash, flashEnabled, onFlash)
     }
 }
 
 @Composable
-private fun CounterDrum(frame: Int) {
+private fun CounterDrum(realFrame: Int, rewinding: Boolean) {
+    val frame = if (rewinding) rewindingFrame(realFrame) else realFrame
     val description = stringResource(R.string.counter_desc, frame, Roll.FRAMES)
     Box(
         Modifier.size(86.dp, 38.dp).clip(RoundedCornerShape(19.dp)).background(Color(0xFF1A1A19))
@@ -96,6 +99,10 @@ private fun CounterDrum(frame: Int) {
         PointerTriangle(Modifier.align(Alignment.TopCenter), height = 6.dp)
     }
 }
+
+/** Rule 41: the drum's value while rewinding, animated from [from] down to 1 over [REWIND_MS], fast then slow. */
+@Composable
+private fun rewindingFrame(from: Int): Int = TODO()
 
 @Composable
 private fun Digit(value: Int?, size: androidx.compose.ui.unit.TextUnit, color: Color) {

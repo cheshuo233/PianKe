@@ -11,7 +11,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import app.pianke.R
 
-enum class Cue { NOTCH, SHUTTER, ADVANCE, REWIND, REFUSE }
+enum class Cue { NOTCH, SHUTTER, ADVANCE, REWIND, REFUSE, TICK }
 
 /**
  * Haptics and short sounds. The sound flag and the vibration flag come in as parameters;
@@ -33,7 +33,7 @@ class Feedback(context: Context) {
         )
         .build()
 
-    // REFUSE has no sound. A sound not yet loaded when played is simply skipped by SoundPool.
+    // REFUSE and TICK have no sound. A sound not yet loaded when played is simply skipped by SoundPool.
     private val sounds = mapOf(
         Cue.NOTCH to pool.load(context, R.raw.notch, 1),
         Cue.SHUTTER to pool.load(context, R.raw.shutter, 1),
@@ -68,6 +68,7 @@ class Feedback(context: Context) {
         Cue.ADVANCE -> tremor(pulses = 6, onMs = 30L, offMs = 20L)      // about 0.3 s
         Cue.REWIND -> tremor(pulses = 9, onMs = 40L, offMs = 30L)       // about 0.63 s
         Cue.REFUSE -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK)
+        Cue.TICK -> TODO() // Rule 40: PRIMITIVE_LOW_TICK at 0.4, else PRIMITIVE_TICK at 0.25, else none
     }
 
     private fun primitiveOr(primitive: Int, fallback: Int): VibrationEffect =

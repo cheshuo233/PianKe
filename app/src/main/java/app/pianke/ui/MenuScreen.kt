@@ -49,8 +49,10 @@ import androidx.compose.ui.unit.sp
 import app.pianke.R
 import app.pianke.settings.Framing
 import app.pianke.settings.GrainLevel
+import app.pianke.settings.Ritual
 import app.pianke.settings.Settings
 import app.pianke.settings.SoundVolume
+import app.pianke.settings.ZoomMode
 
 private val CardInk = Color(0xFF2E2A26)
 private val CardMuted = Color(0xFF6E665A)
@@ -127,6 +129,8 @@ private fun Groups(settings: Settings, shutterSoundForced: Boolean, version: Str
         ) { onUpdate { it.copy(framing = if (it.framing == Framing.SQUARE) Framing.FOUR_THREE else Framing.SQUARE) } }
         ToggleRow(R.string.menu_date_stamp, settings.dateStamp) { on -> onUpdate { it.copy(dateStamp = on) } }
         ToggleRow(R.string.menu_grid, settings.grid) { on -> onUpdate { it.copy(grid = on) } }
+        RitualRow(settings.ritual, onUpdate)
+        ZoomModeRow(settings.zoomMode, onUpdate)
     }
     Group(R.string.menu_group_develop_en, R.string.menu_group_develop) {
         ValueRow(
@@ -174,6 +178,18 @@ private fun Group(en: Int, title: Int, rows: @Composable () -> Unit) {
         )
         rows()
     }
+}
+
+/** Spec 9.6: a three-stop slider labelled 关 / 中 / 高; dragging the knob or tapping a label changes the stop, release snaps to the nearest. */
+@Composable
+private fun RitualRow(ritual: Ritual, onUpdate: ((Settings) -> Settings) -> Unit) {
+    TODO()
+}
+
+/** Spec 9.6: a [ValueRow] showing 档位 / 任意; a tap toggles. */
+@Composable
+private fun ZoomModeRow(mode: ZoomMode, onUpdate: ((Settings) -> Settings) -> Unit) {
+    TODO()
 }
 
 @Composable

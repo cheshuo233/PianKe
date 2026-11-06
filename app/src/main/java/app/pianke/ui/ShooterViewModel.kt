@@ -48,11 +48,11 @@ import java.time.LocalDateTime
  * - `init` (viewModelScope) owns the process-scoped flows: the one-shot film resolution, then `settings` ->
  *   `state.settings` (never touching `filmIndex` again), `inFlight` -> `developing`, and `outcomes` ->
  *   `lastPhoto` / LCD, then `developer.latest()`.
- * - From then on this class owns `state.filmIndex`: [selectFilm] sets it synchronously.
+ * - From then on this class owns `state.filmIndex`: [selectFilmAt] sets it synchronously.
  * - [drive] owns only the Activity-scoped work, as side effects of state on the camera and the renderer.
  *
  * [CameraController] and [PreviewRenderer] belong to the Activity (H2). The renderer is only touched inside
- * [drive]; the controller is also held in [camera] while [drive] runs, so [onShutter] and [selectStop] can reach it.
+ * [drive]; the controller is also held in [camera] while [drive] runs, so [onShutter] and [selectZoom] can reach it; the renderer is held in [renderer] the same way for [focusAt].
  */
 class ShooterViewModel(
     private val catalog: FilmCatalog,
@@ -67,16 +67,20 @@ class ShooterViewModel(
         ShooterUiState(
             films = catalog.films, filmIndex = 0,
             settings = Settings(),
-            stops = emptyList(), stopIndex = 0,
+            stops = emptyList(), zoomRatio = 1f,
             exposure = null,
             issue = null, permission = Permission.UNKNOWN,
             developing = 0, lcdMessage = null, lastPhoto = null,
+            drawer = Drawer.CLOSED, rewinding = false,
         ),
     )
     val state: StateFlow<ShooterUiState> = _state.asStateFlow()
 
     /** Set only by [drive], cleared by identity when that `drive` ends. */
     private var camera: CameraController? = null
+
+    /** Set and cleared together with [camera]; [focusAt] needs it for `viewToFrame`. */
+    private var renderer: PreviewRenderer? = null
 
     /** True from the press until `capture` returns. Main thread only. */
     private var capturing = false
@@ -120,11 +124,12 @@ class ShooterViewModel(
      * - the film index -> `renderer.setFilm`, the only call; its first emission is H3, also after recreation;
      * - grain -> `setGrain`, flash -> `setFlash`;
      * - distinct (permission granted, lens) -> `bind`; never rebinds for other settings changes;
-     * - `camera.stops` -> the H4 reset of the ring to the ratio-1 stop (the only place);
+     * - `camera.stops` -> rule 32, the reset of the zoom ratio to 1 (the only place);
      * - `camera.issue` and `camera.exposure` -> state.
      */
     suspend fun drive(camera: CameraController, renderer: PreviewRenderer): Nothing {
         this.camera = camera
+        this.renderer = renderer
         try {
             coroutineScope {
                 launch {
@@ -147,9 +152,8 @@ class ShooterViewModel(
                 }
                 launch {
                     camera.stops.collect { stops ->
-                        // CameraX starts at ratio 1 after a bind, so this sets the index only: no setZoom, no cue.
-                        val unit = stops.indexOfFirst { it.ratio == 1f }.coerceAtLeast(0)
-                        _state.update { it.copy(stops = stops, stopIndex = unit) }
+                        // CameraX starts at ratio 1 after a bind, so this sets the ratio only: no setZoom, no cue.
+                        _state.update { it.copy(stops = stops, zoomRatio = 1f) }
                     }
                 }
                 launch { camera.issue.collect { issue -> _state.update { it.copy(issue = issue) } } }
@@ -157,7 +161,10 @@ class ShooterViewModel(
             }
             awaitCancellation()
         } finally {
-            if (this.camera === camera) this.camera = null
+            if (this.camera === camera) {
+                this.camera = null
+                this.renderer = null
+            }
         }
     }
 
@@ -166,27 +173,43 @@ class ShooterViewModel(
     }
 
     /**
-     * The only film-selection entry. Wraps modulo the film count, updates the index synchronously (the LUT follows
-     * immediately through [drive]), plays NOTCH, and persists the id asynchronously.
+     * Rule 37: the only film-selection entry. Sets the index synchronously (the LUT follows immediately through
+     * [drive]), plays NOTCH, persists the id asynchronously, and sets the drawer to CLOSED.
      */
-    fun selectFilm(delta: Int) {
-        val films = catalog.films
-        val next = Math.floorMod(_state.value.filmIndex + delta, films.size)
-        _state.update { it.copy(filmIndex = next) }
-        cue(Cue.NOTCH)
-        viewModelScope.launch { settingsStore.update { it.copy(filmId = films[next].id) } }
+    fun selectFilmAt(index: Int) {
+        TODO()
     }
 
-    /** The one zoom-stepping entry: no-op for the current index, else `setZoom` + NOTCH. */
-    fun selectStop(index: Int) {
-        val camera = camera ?: return
-        val current = _state.value
-        if (index == current.stopIndex) return
-        val stop = current.stops.getOrNull(index) ?: return
-        _state.update { it.copy(stopIndex = index) }
-        camera.setZoom(stop)
-        cue(Cue.NOTCH)
+    /** The film row's entry: [selectFilmAt] of the index [delta] away, wrapping modulo the film count. */
+    fun selectFilm(delta: Int) {
+        selectFilmAt(Math.floorMod(_state.value.filmIndex + delta, catalog.films.size))
     }
+
+    /** Rule 37: CLOSED -> OPEN; any other state is left alone. */
+    fun openDrawer() {
+        TODO()
+    }
+
+    /** Rule 37: OPEN -> CLOSED; REQUIRED is left alone. */
+    fun closeDrawer() {
+        TODO()
+    }
+
+    /** The drawer wheel passed one roll: plays TICK. */
+    fun drawerStep() {
+        TODO()
+    }
+
+    /** Rules 28 and 29: clamps [ratio], ignores the current value, `setZoom`, then plays the cue for the crossing. */
+    fun selectZoom(ratio: Float) {
+        TODO()
+    }
+
+    /**
+     * Rule 34 (via 33): [x], [y] are normalised within the viewfinder view; `renderer.viewToFrame` then
+     * `camera.focusAt`. False when there is no camera or the frame size is unknown; plays TICK on success.
+     */
+    suspend fun focusAt(x: Float, y: Float): Boolean = TODO()
 
     /**
      * Spec section 8 shutter flow, the only place it is written. [rotation] is a Surface.ROTATION_* value

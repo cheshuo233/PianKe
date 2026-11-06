@@ -34,12 +34,12 @@ import kotlin.math.roundToInt
 private val LcdInk = Color(0xFF1C2218)
 
 /**
- * The 180 dp LCD (spec 9.2 table), as a liveRegion, inside its 4 dp bezel. Row 4 left is [message] if present,
+ * The 180 dp LCD (spec 9.2 table), as a liveRegion, inside its 4 dp bezel. Row 4 left is REWIND while [rewinding] (9.5), else [message] if present,
  * else "DEV" with one dot per frame in [developing], else empty; right is `{n}/{filmCount}`. Row 3 formats shutter
  * speed and aperture from [exposure].
  */
 @Composable
-fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, developing: Int, @StringRes message: Int?) {
+fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, developing: Int, @StringRes message: Int?, rewinding: Boolean) {
     fun style(size: Int, color: Color = LcdInk) = TextStyle(fontFamily = PiankeType.Lcd, fontSize = size.sp, color = color)
 
     Box(
@@ -65,7 +65,7 @@ fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, de
                 style(14),
             )
             LcdRow(
-                message?.let { stringResource(it) } ?: if (developing > 0) {
+                if (rewinding) stringResource(R.string.lcd_rewind) else message?.let { stringResource(it) } ?: if (developing > 0) {
                     stringResource(R.string.lcd_developing, "●".repeat(developing))
                 } else {
                     ""

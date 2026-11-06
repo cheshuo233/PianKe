@@ -11,6 +11,12 @@ enum class Lens { BACK, FRONT }
 /** The gain of the sounds the app plays itself; the system's forced shutter sound is not scaled by it. */
 enum class SoundVolume(val gain: Float) { LOW(0.3f), MEDIUM(0.6f), HIGH(1.0f) }
 
+/** How much film ritual the shutter performs: nothing, advance and rewind, or those plus the forced reload drawer. */
+enum class Ritual { OFF, MEDIUM, HIGH }
+
+/** Whether the zoom strip snaps to the stops or zooms freely. */
+enum class ZoomMode { STOPS, FREE }
+
 /** Contract K6: DataStore keys are these property names, enums are stored by `name`; keys may be added, never renamed. */
 data class Settings(
     val filmId: String? = null,            // null: the first roll; an id, not an index, so reordering films.toml cannot shift it
@@ -26,4 +32,6 @@ data class Settings(
     val lens: Lens = Lens.BACK,
     val rollBack: Int = 1,                 // number of the next frame, 1..36
     val rollFront: Int = 1,
+    val ritual: Ritual = Ritual.MEDIUM,
+    val zoomMode: ZoomMode = ZoomMode.STOPS,
 )

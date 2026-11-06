@@ -56,7 +56,7 @@ import java.util.Locale
 
 /**
  * The shooting screen: top bar, live viewfinder with its overlays (corner mask, 1:1 mask, grid, date stamp, focal
- * tag, issue text), zoom ring, film row, bottom bar. [preview] is the Activity's GLSurfaceView, already attached to
+ * tag, issue text), zoom strip, film row, bottom bar. [preview] is the Activity's GLSurfaceView, already attached to
  * the renderer; it is only embedded here, so MENU and the permission gate never destroy it. [rotation] is read when
  * the shutter is pressed.
  */
@@ -70,33 +70,45 @@ fun CameraScreen(
 ) {
     val context = LocalContext.current
     val front = state.settings.lens == Lens.FRONT
-    Column(Modifier.bodyBackground().windowInsetsPadding(WindowInsets.systemBars)) {
-        TopBar(state.settings.frame, state.settings.flash, !front, onOpenMenu, viewModel::cycleFlash)
-        Box(Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)) { Viewfinder(state, preview) }
-        Box(Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally)) {
-            ZoomRing(state.stops, state.stopIndex, viewModel::selectStop)
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.bodyBackground().windowInsetsPadding(WindowInsets.systemBars)) {
+            TopBar(
+                state.settings.frame, state.settings.flash, !front, state.counterShown, state.rewinding,
+                onOpenMenu, viewModel::cycleFlash,
+            )
+            Box(Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)) { Viewfinder(state, preview) }
+            Box(Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally)) {
+                ZoomStrip(state.stops, state.zoomRatio, state.settings.zoomMode, state.focalMm, state.stop, viewModel::selectZoom)
+            }
+            Box(Modifier.padding(top = 6.dp)) {
+                FilmRow(
+                    films = state.films,
+                    filmIndex = state.filmIndex,
+                    lcd = {
+                        LcdPanel(
+                            state.films[state.filmIndex], state.filmIndex, state.films.size,
+                            state.exposure, state.developing, state.lcdMessage, state.rewinding,
+                        )
+                    },
+                    onSelect = viewModel::selectFilm,
+                    onOpen = viewModel::openDrawer,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            BottomBar(
+                lastPhoto = state.lastPhoto,
+                onGallery = { state.lastPhoto?.let { openPhoto(context, it) } },
+                onShutter = { viewModel.onShutter(rotation()) },
+                onFlip = viewModel::flipLens,
+            )
+            Spacer(Modifier.height(14.dp))
         }
-        Box(Modifier.padding(top = 6.dp)) {
-            FilmRow(
-                films = state.films,
-                filmIndex = state.filmIndex,
-                lcd = {
-                    LcdPanel(
-                        state.films[state.filmIndex], state.filmIndex, state.films.size,
-                        state.exposure, state.developing, state.lcdMessage,
-                    )
-                },
-                onSelect = viewModel::selectFilm,
+        if (state.drawer != Drawer.CLOSED) {
+            FilmDrawer(
+                films = state.films, filmIndex = state.filmIndex, required = state.drawer == Drawer.REQUIRED,
+                onStep = viewModel::drawerStep, onPick = viewModel::selectFilmAt, onClose = viewModel::closeDrawer,
             )
         }
-        Spacer(Modifier.weight(1f))
-        BottomBar(
-            lastPhoto = state.lastPhoto,
-            onGallery = { state.lastPhoto?.let { openPhoto(context, it) } },
-            onShutter = { viewModel.onShutter(rotation()) },
-            onFlip = viewModel::flipLens,
-        )
-        Spacer(Modifier.height(14.dp))
     }
 }
 
@@ -145,7 +157,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
                 style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.1.sp, color = Color(0xFFF28C3A)),
             )
         }
-        state.stops.getOrNull(state.stopIndex)?.let { stop ->
+        state.stop?.let { stop ->
             val ratio = String.format(Locale.ROOT, "%.1f", stop.ratio).removeSuffix(".0")
             BasicText(
                 stringResource(R.string.zoom_tag, stop.mm, stringResource(R.string.zoom_ratio, ratio), stringResource(zoomNoteRes(stop, front))),

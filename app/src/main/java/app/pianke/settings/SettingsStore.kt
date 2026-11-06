@@ -34,6 +34,8 @@ private val FLASH = stringPreferencesKey("flash")
 private val LENS = stringPreferencesKey("lens")
 private val ROLL_BACK = intPreferencesKey("rollBack")
 private val ROLL_FRONT = intPreferencesKey("rollFront")
+private val RITUAL = stringPreferencesKey("ritual")
+private val ZOOM_MODE = stringPreferencesKey("zoomMode")
 
 // Every fallback is read from here, so the defaults stay only in Settings.kt.
 private val DEFAULTS = Settings()
@@ -60,6 +62,8 @@ private fun Preferences.toSettings() = Settings(
     lens = enum(LENS, DEFAULTS.lens),
     rollBack = roll(ROLL_BACK, DEFAULTS.rollBack),
     rollFront = roll(ROLL_FRONT, DEFAULTS.rollFront),
+    ritual = enum(RITUAL, DEFAULTS.ritual),
+    zoomMode = enum(ZOOM_MODE, DEFAULTS.zoomMode),
 )
 
 private fun MutablePreferences.write(s: Settings) {
@@ -77,6 +81,8 @@ private fun MutablePreferences.write(s: Settings) {
     this[LENS] = s.lens.name
     this[ROLL_BACK] = s.rollBack
     this[ROLL_FRONT] = s.rollFront
+    this[RITUAL] = s.ritual.name
+    this[ZOOM_MODE] = s.zoomMode.name
 }
 
 class SettingsStore(context: Context) {

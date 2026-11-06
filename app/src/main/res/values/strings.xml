@@ -24,7 +24,9 @@
     <string name="issue_in_use">相机被占用</string>
     <string name="issue_fatal">相机出错，请重开</string>
 
-    <!-- Zoom ring -->
+    <string name="zoom_tag_free">%1$dmm · %2$s</string>
+
+    <!-- Zoom strip -->
     <string name="zoom_to_desc">变焦到 %1$d 毫米</string>
 
     <!-- Film row and LCD -->
@@ -39,9 +41,14 @@
     <string name="lcd_no_shot">未拍到</string>
     <string name="lcd_develop_failed">冲洗失败，已暂存</string>
     <string name="lcd_storage_full">存储已满</string>
+    <string name="lcd_rewind">REWIND</string>
     <string name="film_pick_desc">换成 %1$s</string>
     <string name="film_prev_desc">上一卷</string>
     <string name="film_next_desc">下一卷</string>
+
+    <!-- Film drawer -->
+    <string name="drawer_label_desc">胶卷 %1$s</string>
+    <string name="drawer_required">装一卷新胶卷</string>
 
     <!-- Bottom bar -->
     <string name="gallery_desc">相册</string>
@@ -83,6 +90,13 @@
     <string name="menu_volume_medium">中</string>
     <string name="menu_volume_high">高</string>
     <string name="menu_vibration">震动</string>
+    <string name="menu_ritual">仪式感</string>
+    <string name="menu_ritual_off">关</string>
+    <string name="menu_ritual_medium">中</string>
+    <string name="menu_ritual_high">高</string>
+    <string name="menu_zoom_mode">变焦方式</string>
+    <string name="menu_zoom_mode_stops">档位</string>
+    <string name="menu_zoom_mode_free">任意</string>
     <string name="menu_about">关于片刻</string>
     <string name="menu_footer_name">片刻</string>
     <string name="menu_footer_line">PIANKE 135 · v%1$s · OPEN SOURCE</string>

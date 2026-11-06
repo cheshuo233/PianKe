@@ -76,10 +76,16 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     }
 
     /** Remembered, because CameraX goes back to 1x whenever the use cases detach (stop/start, rebind); OPEN re-applies it. */
-    fun setZoom(stop: ZoomStop) {
-        zoomRatio = stop.ratio
-        camera?.cameraControl?.setZoomRatio(stop.ratio)
+    fun setZoom(ratio: Float) {
+        zoomRatio = ratio
+        camera?.cameraControl?.setZoomRatio(ratio)
     }
+
+    /**
+     * Rule 34: meters and focuses at ([x], [y]), normalised 0..1 over the upright, uncropped frame as the screen shows
+     * it (front mirrored). Returns `isFocusSuccessful`; false with no camera, when superseded, or on error.
+     */
+    suspend fun focusAt(x: Float, y: Float): Boolean = TODO()
 
     /** The only FlashMode -> ImageCapture mapping; front is always FLASH_MODE_OFF; bind applies its flash through here. */
     fun setFlash(mode: FlashMode) {
