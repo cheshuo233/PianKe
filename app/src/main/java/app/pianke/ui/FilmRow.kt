@@ -1,7 +1,7 @@
 package app.pianke.ui
 
 import android.graphics.BitmapFactory
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -137,32 +137,57 @@ fun FilmRow(
         }
     }
 
-    // `target` is the unwrapped film position the wheel settles on; `shown` is the angle in films, animated or dragged.
-    var target by remember { mutableIntStateOf(filmIndex) }
-    var dragging by remember { mutableStateOf(false) }
-    var dragStart by remember { mutableIntStateOf(0) }
-    var dragValue by remember { mutableFloatStateOf(0f) }
-    val animated = remember { Animatable(filmIndex.toFloat()) }
-    val shown = if (dragging) dragValue else animated.value
-    var lastShown = shown
+    // ONE continuous, unwrapped wheel position, in steps. Labels and dial both derive from it; the film index is
+    // always position mod n. Drag, tap and snap all move this same value, so nothing ever turns a whole cycle.
+    var position by remember { mutableFloatStateOf(filmIndex.toFloat()) }
+    var dragBase by remember { mutableFloatStateOf(0f) }
+    var goal by remember { mutableStateOf<Goal?>(null) }
+    var goalId by remember { mutableIntStateOf(0) }
+    val shown = position
 
-    LaunchedEffect(filmIndex) { target += wrap(filmIndex - target, n) }
-    LaunchedEffect(target, dragging) {
-        if (!dragging) {
-            animated.snapTo(lastShown)
-            animated.animateTo(target.toFloat(), tween(320, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+    // A new goal animates from the current value; starting a drag sets the goal to null and so cancels it.
+    LaunchedEffect(goal) {
+        val g = goal ?: return@LaunchedEffect
+        animate(position, g.value, animationSpec = tween(320, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f))) { v, _ ->
+            position = v
         }
     }
-    lastShown = shown
+    // The index changed for a reason other than this wheel (startup, resolve): jump to its nearest equivalent.
+    // Steps this wheel reported itself already agree with where it is heading, so they do nothing here.
+    LaunchedEffect(filmIndex) {
+        val settled = (goal?.value ?: position).roundToInt()
+        if (Math.floorMod(settled, n) != filmIndex) {
+            goal = null
+            position = (settled + wrap(filmIndex - settled, n)).toFloat()
+        }
+    }
 
     val currentOnSelect by rememberUpdatedState(onSelect)
+    fun settle(value: Float) {
+        goalId++
+        goal = Goal(value, goalId)
+    }
+
+    /** Moves the position by [steps] from where the drag began, reporting each step boundary crossed, once each. */
+    fun dragTo(steps: Float) {
+        val before = position.roundToInt()
+        position = dragBase + steps
+        val diff = position.roundToInt() - before
+        repeat(abs(diff)) { currentOnSelect(if (diff > 0) 1 else -1) }
+    }
+
+    /** A tap: one step from the current continuous position. */
+    fun tapStep(delta: Int) {
+        settle(position.roundToInt() + delta.toFloat())
+        currentOnSelect(delta)
+    }
+
     @Composable
     fun drag(stepDp: Float) = Modifier.stepDrag(
         stepDp,
-        onStart = { dragStart = target; dragValue = target.toFloat(); dragging = true },
-        onOffset = { steps -> dragValue = dragStart + steps },
-        onStep = { currentOnSelect(it) },
-        onEnd = { dragging = false },
+        onStart = { goal = null; dragBase = position },
+        onOffset = ::dragTo,
+        onEnd = { settle(position.roundToInt().toFloat()) },
     )
 
     val margin = LocalEdgeMargin.current
@@ -219,7 +244,7 @@ fun FilmRow(
                                 transformOrigin = TransformOrigin((WHEEL_RADIUS + LABEL_W / 2) / LABEL_W, 0.5f)
                             }
                             .border(1.dp, Color(0x29FFFFFF), RoundedCornerShape(2.dp))
-                            .clickable(enabled = neighbour, role = Role.Button) { onSelect(if (d > 0) 1 else -1) }
+                            .clickable(enabled = neighbour, role = Role.Button) { tapStep(if (d > 0) 1 else -1) }
                             .semantics { if (neighbour) contentDescription = pick },
                     )
                 }
@@ -245,7 +270,7 @@ fun FilmRow(
         }
 
         Box(Modifier.offset(width - DIAL_RADIUS.dp, (cy - DIAL_RADIUS).dp)) {
-            Dial(shown, drag(DIAL_STEP_DP), onPrev = { onSelect(-1) }, onNext = { onSelect(1) })
+            Dial(shown, drag(DIAL_STEP_DP), onPrev = { tapStep(-1) }, onNext = { tapStep(1) })
         }
     }
 }
@@ -297,38 +322,35 @@ private fun Dial(shown: Float, drag: Modifier, onPrev: () -> Unit, onNext: () ->
 }
 
 /**
- * One vertical step-drag used by both the window and the dial. Reports the continuous offset in steps (dragging up
- * is positive, bringing the next film in) and a +1 / -1 for every step crossed, counted from the drag start.
+ * One vertical drag used by both the window and the dial. Reports the continuous offset in steps (dragging up is
+ * positive, bringing the next film in); the caller turns that into a position and the crossed steps.
  */
 @Composable
 private fun Modifier.stepDrag(
     stepDp: Float,
     onStart: () -> Unit,
     onOffset: (Float) -> Unit,
-    onStep: (Int) -> Unit,
     onEnd: () -> Unit,
 ): Modifier {
     val stepPx = with(LocalDensity.current) { stepDp.dp.toPx() }
     val start by rememberUpdatedState(onStart)
     val offset by rememberUpdatedState(onOffset)
-    val step by rememberUpdatedState(onStep)
     val end by rememberUpdatedState(onEnd)
     return this.pointerInput(stepPx) {
         var dy = 0f
-        var emitted = 0
         detectVerticalDragGestures(
-            onDragStart = { dy = 0f; emitted = 0; start() },
+            onDragStart = { dy = 0f; start() },
             onDragEnd = { end() },
             onDragCancel = { end() },
         ) { _, amount ->
             dy += amount
             offset(-dy / stepPx)
-            val steps = (-dy / stepPx).roundToInt()
-            while (emitted < steps) { step(1); emitted++ }
-            while (emitted > steps) { step(-1); emitted-- }
         }
     }
 }
+
+/** Where the wheel is heading; [id] makes two goals with the same value distinct, so each one restarts the animation. */
+private data class Goal(val value: Float, val id: Int)
 
 /**
  * The one window shape: the circular band (circle centre in dp relative to the element, inner and outer radius)
