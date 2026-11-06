@@ -1,5 +1,5 @@
-/* film_engine: films.bin catalog, RGB565 preview table, photo development.
- * Pure C11. No ESP-IDF headers, no global state, not thread-safe (call from one task). */
+/* film_engine: films.bin catalog and photo development.
+ * Pure C11. No platform headers, no global state, not thread-safe (call from one thread at a time). */
 #ifndef FILM_ENGINE_H
 #define FILM_ENGINE_H
 
@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-/* Empty on the device; the PC build defines it as __declspec(dllexport). */
+/* Empty by default; a host build may define it as __declspec(dllexport). */
 #ifndef FE_API
 #define FE_API
 #endif
@@ -26,7 +26,7 @@ typedef struct {
     uint8_t        halation_radius;
     uint8_t        halation_tint[3];
     uint8_t        lut_size;
-    const uint8_t *lut;               /* points straight into the films.bin data (memory mapped), not copied */
+    const uint8_t *lut;               /* points straight into the films.bin data, not copied */
 } fe_film_t;
 
 typedef struct fe_catalog fe_catalog_t;
@@ -34,13 +34,14 @@ typedef struct fe_catalog fe_catalog_t;
 typedef struct { uint16_t year; uint8_t month; uint8_t day; } fe_date_t;
 
 typedef struct {
-    uint8_t *rgb;                     /* RGB888, processed in place */
+    uint8_t *pixels;                  /* first row, processed in place */
     uint16_t width, height;
-    uint32_t stride;                  /* bytes per row */
+    uint32_t stride;                  /* bytes per row, >= channels * width */
+    uint8_t  channels;                /* 3 = RGB888; 4 = RGBA8888 (byte 3 is never read or written) */
 } fe_image_t;
 
 typedef struct {
-    void *(*alloc)(size_t size);      /* PSRAM on the device; malloc on the PC */
+    void *(*alloc)(size_t size);      /* e.g. malloc */
     void  (*release)(void *ptr);
 } fe_allocator_t;
 
@@ -55,9 +56,6 @@ FE_API size_t           fe_catalog_count(const fe_catalog_t *catalog);
 FE_API const fe_film_t *fe_catalog_film(const fe_catalog_t *catalog, size_t index);
 FE_API int              fe_catalog_find(const fe_catalog_t *catalog, const char *id); /* -1 if not found */
 FE_API void             fe_catalog_close(fe_catalog_t *catalog);
-
-FE_API fe_err_t fe_preview_table_build(const fe_film_t *film, uint16_t table[65536]);
-FE_API void     fe_preview_apply(const uint16_t table[65536], uint16_t *rgb565, size_t pixel_count);
 
 FE_API fe_err_t fe_develop(const fe_develop_params_t *params, fe_image_t *image, const fe_allocator_t *alloc);
 

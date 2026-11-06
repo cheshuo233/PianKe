@@ -1,10 +1,10 @@
-/* 3D LUT application. Tetrahedral interpolation lives here and only here: the preview table and
- * develop both go through fe_lut_apply_pixel, so they cannot disagree. fe_lut_apply_image sits in the
- * same translation unit so the per-pixel call can be inlined into its loop. */
+/* 3D LUT application. Tetrahedral interpolation lives here and only here; develop goes through it. */
 #include "lut.h"
+#include "pixel.h"
 
 /* Exact: weights are the fractions of 255 (in 0..255), the sum is rounded once at the end. */
-void fe_lut_apply_pixel(const fe_film_t *film, const uint8_t in[3], uint8_t out[3])
+/* One RGB888 pixel through the LUT. in and out may alias. */
+static void lut_pixel(const fe_film_t *film, const uint8_t in[3], uint8_t out[3])
 {
     const unsigned n = film->lut_size;
     const unsigned step[3] = {3u, 3u * n, 3u * n * n}; /* bytes between neighbouring nodes along r, g, b */
@@ -36,10 +36,11 @@ void fe_lut_apply_pixel(const fe_film_t *film, const uint8_t in[3], uint8_t out[
 
 void fe_lut_apply_image(const fe_film_t *film, fe_image_t *image)
 {
-    for (uint16_t y = 0; y < image->height; y++) {
-        uint8_t *row = image->rgb + (size_t)y * image->stride;
-        for (uint16_t x = 0; x < image->width; x++) {
-            fe_lut_apply_pixel(film, row + 3u * x, row + 3u * x);
+    const unsigned step = fe_pixel_step(image);
+    for (uint32_t y = 0; y < image->height; y++) {
+        uint8_t *px = fe_row(image, y);
+        for (uint32_t x = 0; x < image->width; x++, px += step) {
+            lut_pixel(film, px, px);
         }
     }
 }

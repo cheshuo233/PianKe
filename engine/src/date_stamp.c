@@ -1,10 +1,11 @@
 /* Date stamp: "'YY MM DD" in orange seven-segment digits with a glow, procedurally drawn (no font).
- * Owns the stamp's layout (size from image height, margin, position bottom-right), the digit shapes
+ * Owns the stamp's layout (size from the short side, margin, position bottom-right), the digit shapes
  * and the orange. The rest of the image is never written. Everything is alpha blended over the
  * photo, so no channel can leave 0..255. */
 #include "date_stamp.h"
+#include "pixel.h"
 
-/* Layout: digit height = image height / STAMP_HEIGHT_DIV; the stamp is 9 cells wide (' Y Y _ M M _ D D),
+/* Layout: digit height = min(width, height) / STAMP_HEIGHT_DIV (D4: the same size in landscape and portrait); the stamp is 9 cells wide (' Y Y _ M M _ D D),
  * its right edge and its baseline are one digit height from the image edges. */
 #define STAMP_HEIGHT_DIV 24
 #define STAMP_TEXT_LEN 9
@@ -74,8 +75,8 @@ static void blend_rect(fe_image_t *image, int x0, int y0, int x1, int y1, int al
     x1 = x1 > (int)image->width ? (int)image->width : x1;
     y1 = y1 > (int)image->height ? (int)image->height : y1;
     for (int y = y0; y < y1; y++) {
-        uint8_t *px = image->rgb + (size_t)y * image->stride + 3u * (unsigned)x0;
-        for (int x = x0; x < x1; x++, px += 3) {
+        uint8_t *px = fe_pixel(image, (uint32_t)x0, (uint32_t)y);
+        for (int x = x0; x < x1; x++, px += fe_pixel_step(image)) {
             for (int c = 0; c < 3; c++) {
                 px[c] = (uint8_t)((px[c] * (255 - alpha) + ORANGE[c] * alpha + 127) / 255);
             }
@@ -127,7 +128,8 @@ void fe_date_stamp_apply(const fe_date_t *date, fe_image_t *image)
 {
     char text[STAMP_TEXT_LEN + 1];
     format_date(date, text);
-    int h = image->height / STAMP_HEIGHT_DIV;
+    const int short_side = image->width < image->height ? image->width : image->height;
+    int h = short_side / STAMP_HEIGHT_DIV;
     h = h < 1 ? 1 : h;
     const int w = digit_width(h), gap = w / 2, advance = w + gap;
     const int text_width = STAMP_TEXT_LEN * advance - gap;

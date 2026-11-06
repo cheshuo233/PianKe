@@ -3,7 +3,7 @@
  * bytes are passed on unchecked (each stage clamps the value it uses); only what could make the
  * engine read outside the blob is validated here.
  * Every bound is checked against the blob size before the bytes are read, and written without an
- * addition or multiplication that could wrap: size_t is 32 bits on the target. */
+ * addition or multiplication that could wrap: size_t may be only 32 bits (32-bit targets). */
 #include <stdint.h>
 #include <string.h>
 
@@ -36,7 +36,7 @@ struct fe_catalog {
     fe_film_t     *films;   /* count entries, in the same allocation, right after this struct */
 };
 
-/* count is a u16, so the one allocation (struct + count films) cannot wrap a 32-bit size_t. */
+/* count is a u16, so the one allocation (struct + count films) cannot wrap even a 32-bit size_t. */
 _Static_assert(sizeof(struct fe_catalog) + 65535u * sizeof(fe_film_t) <= (size_t)0xFFFFFFFFu,
                "catalog allocation size must fit in 32 bits");
 

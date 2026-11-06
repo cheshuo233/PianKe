@@ -9,9 +9,9 @@
 
 fe_err_t fe_develop(const fe_develop_params_t *params, fe_image_t *image, const fe_allocator_t *alloc)
 {
-    if (params == NULL || image == NULL || image->rgb == NULL || alloc == NULL || alloc->alloc == NULL ||
+    if (params == NULL || image == NULL || image->pixels == NULL || alloc == NULL || alloc->alloc == NULL ||
         alloc->release == NULL || image->width == 0 || image->height == 0 ||
-        image->stride < 3u * image->width) {
+        (image->channels != 3 && image->channels != 4) || image->stride < (uint32_t)image->channels * image->width) {
         return FE_ERR_INVALID_ARG;
     }
     const fe_film_t *film = params->film;
