@@ -1,0 +1,7 @@
+# Bake-machine environment. Python 3.13 is required (spektrafilm: requires-python ~=3.13).
+#   uv venv --python 3.13 tools/.venv && uv pip install --python tools/.venv -r tools/requirements.txt
+# spektrafilm is GPLv3 and runs on the PC only; it is pinned to an exact commit so films.bin is reproducible.
+spektrafilm @ git+https://github.com/andreavolpato/spektrafilm.git@3bb2c2d2801ff68b92019cf1dbcbb133d60832bc
+numpy~=2.4
+colour-science~=0.4.6
+pytest>=8

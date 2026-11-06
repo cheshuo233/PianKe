@@ -1,0 +1,145 @@
+# 胶片清单（唯一来源）。字段含义见 docs/superpowers/specs/2026-11-03-film-camera-design.md §4.1。
+# 改了这里要重新烘焙：python tools/bake_films.py --toml films/films.toml --out films/films.bin
+#
+# grain.strength 0..1；grain.size 是颗粒直径（成片像素）。
+# halation.radius 以 96x96 缩略图的像素为单位；halation.tint 是光晕颜色 [r, g, b]。
+# 颗粒和光晕的数值是初始值，按观感调整，定稿以本文件为准。
+
+# ---- negative：彩色负片 -> Kodak Portra Endura 相纸 ----
+
+[[film]]
+id = "portra160"
+name = "Kodak Portra 160"
+kind = "negative"
+stock = "kodak_portra_160"
+print = "kodak_portra_endura"
+grain = { strength = 0.20, size = 1.0 }
+halation = { strength = 0.10, radius = 5, tint = [255, 90, 40] }
+
+[[film]]
+id = "portra400"
+name = "Kodak Portra 400"
+kind = "negative"
+stock = "kodak_portra_400"
+print = "kodak_portra_endura"
+grain = { strength = 0.35, size = 1.2 }
+halation = { strength = 0.15, radius = 6, tint = [255, 90, 40] }
+
+[[film]]
+id = "portra800"
+name = "Kodak Portra 800"
+kind = "negative"
+stock = "kodak_portra_800"
+print = "kodak_portra_endura"
+grain = { strength = 0.45, size = 1.5 }
+halation = { strength = 0.18, radius = 6, tint = [255, 90, 40] }
+
+[[film]]
+id = "gold200"
+name = "Kodak Gold 200"
+kind = "negative"
+stock = "kodak_gold_200"
+print = "kodak_portra_endura"
+grain = { strength = 0.35, size = 1.2 }
+halation = { strength = 0.12, radius = 5, tint = [255, 100, 40] }
+
+[[film]]
+id = "ultramax400"
+name = "Kodak UltraMax 400"
+kind = "negative"
+stock = "kodak_ultramax_400"
+print = "kodak_portra_endura"
+grain = { strength = 0.42, size = 1.3 }
+halation = { strength = 0.14, radius = 6, tint = [255, 100, 40] }
+
+[[film]]
+id = "ektar100"
+name = "Kodak Ektar 100"
+kind = "negative"
+stock = "kodak_ektar_100"
+print = "kodak_portra_endura"
+grain = { strength = 0.15, size = 0.9 }
+halation = { strength = 0.08, radius = 4, tint = [255, 90, 40] }
+
+# ---- negative：Fujifilm 负片 -> Fujifilm Crystal Archive Type II 相纸 ----
+
+[[film]]
+id = "superia400"             # "NC 风"
+name = "Fujifilm Superia X-TRA 400"
+kind = "negative"
+stock = "fujifilm_xtra_400"
+print = "fujifilm_crystal_archive_typeii"
+grain = { strength = 0.45, size = 1.3 }
+halation = { strength = 0.14, radius = 6, tint = [255, 70, 50] }
+
+[[film]]
+id = "c200"
+name = "Fujifilm C200"
+kind = "negative"
+stock = "fujifilm_c200"
+print = "fujifilm_crystal_archive_typeii"
+grain = { strength = 0.35, size = 1.1 }
+halation = { strength = 0.12, radius = 5, tint = [255, 70, 50] }
+
+[[film]]
+id = "pro400h"
+name = "Fujifilm Pro 400H"
+kind = "negative"
+stock = "fujifilm_pro_400h"
+print = "fujifilm_crystal_archive_typeii"
+grain = { strength = 0.30, size = 1.2 }
+halation = { strength = 0.12, radius = 5, tint = [255, 80, 50] }
+
+# ---- cine：电影负片 -> Kodak 2383 印片 ----
+
+[[film]]
+id = "vision3_500t"           # 光晕按 CineStill 的感觉调强：大半径、偏红
+name = "Kodak Vision3 500T"
+kind = "cine"
+stock = "kodak_vision3_500t"
+print = "kodak_2383"
+grain = { strength = 0.45, size = 1.4 }
+halation = { strength = 0.60, radius = 10, tint = [255, 50, 25] }
+
+[[film]]
+id = "vision3_250d"
+name = "Kodak Vision3 250D"
+kind = "cine"
+stock = "kodak_vision3_250d"
+print = "kodak_2383"
+grain = { strength = 0.30, size = 1.2 }
+halation = { strength = 0.15, radius = 6, tint = [255, 90, 40] }
+
+# ---- slide：反转片，不需要相纸（不写 print） ----
+
+[[film]]
+id = "kodachrome64"           # "CC 风"
+name = "Kodak Kodachrome 64"
+kind = "slide"
+stock = "kodak_kodachrome_64"
+grain = { strength = 0.15, size = 0.9 }
+halation = { strength = 0.08, radius = 4, tint = [255, 80, 40] }
+
+[[film]]
+id = "velvia100"
+name = "Fujifilm Velvia 100"
+kind = "slide"
+stock = "fujifilm_velvia_100"
+grain = { strength = 0.12, size = 0.9 }
+halation = { strength = 0.06, radius = 4, tint = [255, 80, 40] }
+
+[[film]]
+id = "provia100f"
+name = "Fujifilm Provia 100F"
+kind = "slide"
+stock = "fujifilm_provia_100f"
+grain = { strength = 0.12, size = 0.9 }
+halation = { strength = 0.06, radius = 4, tint = [255, 80, 40] }
+
+[[film]]
+id = "ektachrome100"
+name = "Kodak Ektachrome 100"
+kind = "slide"
+stock = "kodak_ektachrome_100"
+grain = { strength = 0.15, size = 1.0 }
+halation = { strength = 0.07, radius = 4, tint = [255, 80, 40] }

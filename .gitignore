@@ -1,0 +1,8 @@
+tools/.venv
+tests/engine/_build
+.gradle
+build/
+local.properties
+.superpowers/
+__pycache__/
+.pytest_cache/
