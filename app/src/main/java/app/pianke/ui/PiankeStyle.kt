@@ -1,16 +1,21 @@
 package app.pianke.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pianke.R
 
@@ -39,6 +44,17 @@ val LocalEdgeMargin = compositionLocalOf { 0.dp }
 val Orange = Color(0xFFE8833A)
 val Ink = Color(0xFF1E1E1D)
 val Bezel = Color(0xFF1B1B1A)
+
+/** The orange down-pointing marker over the zoom scale and the roll counter; 10 dp wide. */
+@Composable
+fun PointerTriangle(modifier: Modifier, height: Dp) {
+    Canvas(modifier.size(10.dp, height)) {
+        drawPath(
+            Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() },
+            Orange,
+        )
+    }
+}
 
 /** The grey body of the camera, shared by the viewfinder screen and the notices. */
 fun Modifier.bodyBackground(): Modifier = this

@@ -20,6 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,18 +49,25 @@ fun PermissionGate(permission: Permission, onChange: (Permission) -> Unit, conte
     val activity = LocalActivity.current
     fun granted() = context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
+    fun rationale() = activity?.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) == true
+
+    // The rationale flag before the request: true only after an earlier denial. Dismissing the very first dialog
+    // leaves it false before and after, and must not count as "don't ask again".
+    var deniedBefore by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         onChange(
             when {
                 ok -> Permission.GRANTED
-                // After a denial, no rationale to show means "don't ask again".
-                activity != null && !activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) ->
-                    Permission.DENIED_FOREVER
+                deniedBefore && !rationale() -> Permission.DENIED_FOREVER
                 else -> Permission.DENIED
             },
         )
     }
-    LaunchedEffect(Unit) { if (!granted()) launcher.launch(Manifest.permission.CAMERA) }
+    fun request() {
+        deniedBefore = rationale()
+        launcher.launch(Manifest.permission.CAMERA)
+    }
+    LaunchedEffect(Unit) { if (!granted()) request() }
     LifecycleResumeEffect(Unit) {
         if (granted()) onChange(Permission.GRANTED)
         onPauseOrDispose {}
@@ -81,7 +92,7 @@ fun PermissionGate(permission: Permission, onChange: (Permission) -> Unit, conte
                                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
                                 )
                             } else {
-                                launcher.launch(Manifest.permission.CAMERA)
+                                request()
                             }
                         }.padding(horizontal = 20.dp, vertical = 10.dp),
                     ) {

@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Shooter(app: PiankeApp, catalog: FilmCatalog) {
         val viewModel = viewModel {
-            ShooterViewModel(app, catalog, app.settingsStore, app.feedback, app.pendingStore, app.developer!!, app.queue!!)
+            ShooterViewModel(catalog, app.settingsStore, app.feedback, app.pendingStore, app.developer!!, app.queue!!)
         }
         val state by viewModel.state.collectAsState()
         var menuOpen by rememberSaveable { mutableStateOf(false) }

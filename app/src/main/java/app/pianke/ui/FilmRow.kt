@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,12 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -74,7 +75,7 @@ import kotlinx.coroutines.withContext
 // the window are concentric with it.
 
 /** Row height; the dial (176) fits inside it without touching the zoom scale above or the bottom bar below. */
-const val FILM_ROW_HEIGHT_DP = 184f
+private const val FILM_ROW_HEIGHT_DP = 184f
 private const val DIAL_RADIUS = 88f
 
 private const val LABEL_W = 82f
@@ -88,8 +89,8 @@ private const val WINDOW_INNER = DIAL_RADIUS + 4f
 /** Radius of the label centres: the labels' inner edge sits 4 dp outside the window's inner edge. */
 private const val WHEEL_RADIUS = WINDOW_INNER + 4f + LABEL_W / 2
 
-/** The outer corners of a label are at hypot(WHEEL_RADIUS + 41, 37.5) = 181.9; the window adds 3 dp. */
-private const val WINDOW_OUTER = 185f
+/** The outer corners of the labels, plus 3 dp. */
+private val WINDOW_OUTER: Float = hypot(WHEEL_RADIUS + LABEL_W / 2, LABEL_H / 2) + 3f
 
 /** The window's half height: the current label (+-37.5) shows fully, the neighbours only peek in at the tips. */
 private const val WINDOW_HALF_HEIGHT = 62f
@@ -141,31 +142,28 @@ fun FilmRow(
     // always position mod n. Drag, tap and snap all move this same value, so nothing ever turns a whole cycle.
     var position by remember { mutableFloatStateOf(filmIndex.toFloat()) }
     var dragBase by remember { mutableFloatStateOf(0f) }
-    var goal by remember { mutableStateOf<Goal?>(null) }
-    var goalId by remember { mutableIntStateOf(0) }
-    val shown = position
+    var goal by remember { mutableStateOf<Float?>(null) }
 
     // A new goal animates from the current value; starting a drag sets the goal to null and so cancels it.
     LaunchedEffect(goal) {
         val g = goal ?: return@LaunchedEffect
-        animate(position, g.value, animationSpec = tween(320, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f))) { v, _ ->
+        animate(position, g, animationSpec = tween(320, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f))) { v, _ ->
             position = v
         }
     }
     // The index changed for a reason other than this wheel (startup, resolve): jump to its nearest equivalent.
     // Steps this wheel reported itself already agree with where it is heading, so they do nothing here.
     LaunchedEffect(filmIndex) {
-        val settled = (goal?.value ?: position).roundToInt()
+        val settled = (goal ?: position).roundToInt()
         if (Math.floorMod(settled, n) != filmIndex) {
             goal = null
-            position = (settled + wrap(filmIndex - settled, n)).toFloat()
+            position = (settled + wrapF((filmIndex - settled).toFloat(), n).roundToInt()).toFloat()
         }
     }
 
     val currentOnSelect by rememberUpdatedState(onSelect)
     fun settle(value: Float) {
-        goalId++
-        goal = Goal(value, goalId)
+        goal = value
     }
 
     /** Moves the position by [steps] from where the drag began, reporting each step boundary crossed, once each. */
@@ -176,35 +174,35 @@ fun FilmRow(
         repeat(abs(diff)) { currentOnSelect(if (diff > 0) 1 else -1) }
     }
 
-    /** A tap: one step from the current continuous position. */
+    /** A tap: one step from where the wheel is heading, so taps during the animation keep stepping. */
     fun tapStep(delta: Int) {
-        settle(position.roundToInt() + delta.toFloat())
+        settle((goal ?: position).roundToInt() + delta.toFloat())
         currentOnSelect(delta)
     }
 
     @Composable
     fun drag(stepDp: Float) = Modifier.stepDrag(
         stepDp,
-        onStart = { goal = null; dragBase = position },
+        onStart = { goal?.let { position = it }; goal = null; dragBase = position },
         onOffset = ::dragTo,
         onEnd = { settle(position.roundToInt().toFloat()) },
     )
 
     val margin = LocalEdgeMargin.current
-    val width = 390.dp + margin
+    val width = REFERENCE_WIDTH_DP.dp + margin
     val cy = FILM_ROW_HEIGHT_DP / 2
     // The row overhangs the board by `margin` on the right: shift it so its left edge stays on the board's.
     Box(
         Modifier.offset(margin / 2).requiredWidth(width).height(FILM_ROW_HEIGHT_DP.dp).clipToBounds(),
     ) {
-        Box(Modifier.offset(8.dp, ((FILM_ROW_HEIGHT_DP - 108f) / 2).dp)) { lcd() }
+        Box(Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) { lcd() }
 
         // The light metal plate round the window.
         val plateOuter = WINDOW_OUTER + PLATE_MARGIN + 2f
         val plateHalf = WINDOW_HALF_HEIGHT + PLATE_MARGIN
         Box(
             Modifier.offset(width - plateOuter.dp, (cy - plateHalf).dp).size(plateOuter.dp, (2 * plateHalf).dp)
-                .ringClip(plateOuter, plateHalf, WINDOW_INNER - PLATE_MARGIN, plateOuter)
+                .ringClip(plateHalf, WINDOW_INNER - PLATE_MARGIN, plateOuter)
                 .background(Brush.verticalGradient(listOf(Color(0xFF8C8C88), Color(0xFFB6B6B2), Color(0xFFECECEA)))),
         )
 
@@ -213,7 +211,7 @@ fun FilmRow(
         Box(
             Modifier.offset(width - WINDOW_OUTER.dp, (cy - WINDOW_HALF_HEIGHT).dp)
                 .size(WINDOW_OUTER.dp, (2 * WINDOW_HALF_HEIGHT).dp)
-                .ringClip(WINDOW_OUTER, WINDOW_HALF_HEIGHT, WINDOW_INNER, WINDOW_OUTER)
+                .ringClip(WINDOW_HALF_HEIGHT, WINDOW_INNER, WINDOW_OUTER)
                 .background(
                     Brush.radialGradient(
                         WINDOW_INNER / WINDOW_OUTER to Color(0xFF111110), 0.6f to Color(0xFF262624), 1f to Color(0xFF141413),
@@ -224,11 +222,12 @@ fun FilmRow(
                 .then(drag(WINDOW_STEP_DP)),
         ) {
             films.forEachIndexed { j, film ->
-                val d = wrapF(j - shown, n)
+                val d = wrapF(j - position, n)
                 val a = abs(d)
                 val bitmap = labels[film.id]
-                if (a <= 2.2f && bitmap != null) {
-                    val neighbour = a in 0.5f..1.5f
+                // Beyond 1.5 steps a label is fully clipped by the window.
+                if (a <= 1.5f && bitmap != null) {
+                    val neighbour = a >= 0.5f
                     val pick = stringResource(R.string.film_pick_desc, film.name)
                     val brightness = 1f - 0.3f * minOf(a, 1f)
                     Image(
@@ -270,7 +269,7 @@ fun FilmRow(
         }
 
         Box(Modifier.offset(width - DIAL_RADIUS.dp, (cy - DIAL_RADIUS).dp)) {
-            Dial(shown, drag(DIAL_STEP_DP), onPrev = { tapStep(-1) }, onNext = { tapStep(1) })
+            Dial(position, drag(DIAL_STEP_DP), onPrev = { tapStep(-1) }, onNext = { tapStep(1) })
         }
     }
 }
@@ -349,18 +348,15 @@ private fun Modifier.stepDrag(
     }
 }
 
-/** Where the wheel is heading; [id] makes two goals with the same value distinct, so each one restarts the animation. */
-private data class Goal(val value: Float, val id: Int)
-
 /**
- * The one window shape: the circular band (circle centre in dp relative to the element, inner and outer radius)
- * intersected with the element's own rectangle (the vertical cut). It is built once here and clips everything drawn
+ * The one window shape: the circular band (its centre is on the element's right edge, at height [cy] in dp; inner and
+ * outer radius) intersected with the element's own rectangle (the vertical cut). It is built once here and clips everything drawn
  * after it, the background fill and the labels alike, so the fill and the clip cannot disagree. Drawn through
  * `clipPath`, so nothing escapes onto the neighbouring parts.
  */
-private fun Modifier.ringClip(cx: Float, cy: Float, inner: Float, outer: Float): Modifier = drawWithCache {
+private fun Modifier.ringClip(cy: Float, inner: Float, outer: Float): Modifier = drawWithCache {
     val d = density
-    val centre = Offset(cx * d, cy * d)
+    val centre = Offset(size.width, cy * d)
     val band = Path.combine(
         PathOperation.Difference,
         Path().apply { addOval(Rect(centre, outer * d)) },
@@ -370,9 +366,7 @@ private fun Modifier.ringClip(cx: Float, cy: Float, inner: Float, outer: Float):
     onDrawWithContent { clipPath(shape) { this@onDrawWithContent.drawContent() } }
 }
 
-/** The shortest signed distance in films, in -n/2..n/2, for an integer difference. */
-private fun wrap(delta: Int, n: Int): Int = Math.floorMod(delta + n / 2, n) - n / 2
-
+/** The shortest signed distance in films, in -n/2..n/2. */
 private fun wrapF(delta: Float, n: Int): Float {
     val half = n / 2f
     return ((delta + half) % n + n) % n - half

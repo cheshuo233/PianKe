@@ -10,10 +10,14 @@ $python = "$repo\tools\.venv\Scripts\python.exe"
 function Invoke-Step {
     param([string]$Name, [scriptblock]$Command)
     Write-Host "==> $Name"
+    # A program that cannot start (no tools\.venv, no gradlew.bat) never sets $LASTEXITCODE, and `exit $null` is 0:
+    # seed a failure so that case stops the script too.
+    $global:LASTEXITCODE = 1
     & $Command
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "check failed: $Name (exit code $LASTEXITCODE)" -ForegroundColor Red
-        exit $LASTEXITCODE
+    $code = $LASTEXITCODE
+    if ($code -ne 0) {
+        Write-Host "check failed: $Name (exit code $code)" -ForegroundColor Red
+        exit $(if ($code -gt 0) { $code } else { 1 })
     }
 }
 

@@ -49,6 +49,7 @@ import app.pianke.camera.StopKind
 import app.pianke.camera.ZoomStop
 import app.pianke.settings.Framing
 import app.pianke.settings.Lens
+import app.pianke.settings.frame
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale

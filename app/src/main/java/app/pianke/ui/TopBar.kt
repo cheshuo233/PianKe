@@ -93,14 +93,7 @@ private fun CounterDrum(frame: Int) {
                 ),
             ),
         )
-        Canvas(Modifier.align(Alignment.TopCenter).size(10.dp, 6.dp)) {
-            drawPath(
-                Path().apply {
-                    moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close()
-                },
-                Orange,
-            )
-        }
+        PointerTriangle(Modifier.align(Alignment.TopCenter), height = 6.dp)
     }
 }
 

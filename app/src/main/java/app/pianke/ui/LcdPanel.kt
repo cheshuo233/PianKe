@@ -1,5 +1,6 @@
 package app.pianke.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,12 +34,12 @@ import kotlin.math.roundToInt
 private val LcdInk = Color(0xFF1C2218)
 
 /**
- * The 178 dp LCD (spec 9.2 table), as a liveRegion, inside its 4 dp bezel. Row 4 left is [message] if present,
+ * The 180 dp LCD (spec 9.2 table), as a liveRegion, inside its 4 dp bezel. Row 4 left is [message] if present,
  * else "DEV" with one dot per frame in [developing], else empty; right is `{n}/{filmCount}`. Row 3 formats shutter
  * speed and aperture from [exposure].
  */
 @Composable
-fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, developing: Int, message: String?) {
+fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, developing: Int, @StringRes message: Int?) {
     fun style(size: Int, color: Color = LcdInk) = TextStyle(fontFamily = PiankeType.Lcd, fontSize = size.sp, color = color)
 
     Box(
@@ -64,7 +65,7 @@ fun LcdPanel(film: Film, filmIndex: Int, filmCount: Int, exposure: Exposure?, de
                 style(14),
             )
             LcdRow(
-                message ?: if (developing > 0) {
+                message?.let { stringResource(it) } ?: if (developing > 0) {
                     stringResource(R.string.lcd_developing, "●".repeat(developing))
                 } else {
                     ""

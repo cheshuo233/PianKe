@@ -53,7 +53,10 @@ class Developer(private val context: Context, private val catalog: FilmCatalog) 
         try {
             (resolver.openOutputStream(uri) ?: throw IOException("no output stream for $uri")).use { it.write(jpeg) }
             writeExif(uri, source, film.name)
-            resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+            // A row that stays pending is hidden from the gallery, so an update that touched nothing is a failure.
+            if (resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null) != 1) {
+                throw IOException("could not publish $uri")
+            }
         } catch (t: Throwable) {
             runCatching { resolver.delete(uri, null, null) }.exceptionOrNull()?.let(t::addSuppressed)
             throw t

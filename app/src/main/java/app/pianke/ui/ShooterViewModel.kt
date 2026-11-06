@@ -1,6 +1,6 @@
 package app.pianke.ui
 
-import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.pianke.R
@@ -20,7 +20,8 @@ import app.pianke.settings.Lens
 import app.pianke.settings.Roll
 import app.pianke.settings.Settings
 import app.pianke.settings.SettingsStore
-import kotlinx.coroutines.CancellationException
+import app.pianke.settings.frame
+import app.pianke.settings.withFrame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -54,7 +55,6 @@ import java.time.LocalDateTime
  * [drive]; the controller is also held in [camera] while [drive] runs, so [onShutter] and [selectStop] can reach it.
  */
 class ShooterViewModel(
-    private val context: Context,
     private val catalog: FilmCatalog,
     private val settingsStore: SettingsStore,
     private val feedback: Feedback,
@@ -106,10 +106,8 @@ class ShooterViewModel(
                     when (outcome) {
                         is Outcome.Saved -> _state.update { it.copy(lastPhoto = outcome.uri) }
                         is Outcome.Kept -> showLcd(
-                            context.getString(
-                                if (outcome.reason == KeptReason.STORAGE_FULL) R.string.lcd_storage_full
-                                else R.string.lcd_develop_failed,
-                            ),
+                            if (outcome.reason == KeptReason.STORAGE_FULL) R.string.lcd_storage_full
+                            else R.string.lcd_develop_failed,
                         )
                     }
                 }
@@ -225,31 +223,40 @@ class ShooterViewModel(
                 }
                 if (captured) {
                     withContext(NonCancellable) {
-                        try {
-                            pendingStore.commit(shot)
+                        val committed = try {
+                            withContext(Dispatchers.IO) { pendingStore.commit(shot) }
+                            true
+                        } catch (_: IOException) {
+                            false // treated like a failed capture below: the counter does not move
+                        }
+                        if (committed) {
+                            // The `.meta` exists, so the shot was taken: it is submitted whatever happens to the counter.
                             var rewound = false
-                            settingsStore.update {
-                                val next = Roll.next(it.frame)
-                                rewound = next == 1
-                                it.withFrame(next)
+                            val advanced = try {
+                                settingsStore.update {
+                                    val next = Roll.next(it.frame)
+                                    rewound = next == 1
+                                    it.withFrame(next)
+                                }
+                                true
+                            } catch (_: IOException) {
+                                false
                             }
-                            cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
+                            if (advanced) cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
                             queue.submit(shot)
                             submitted = true
-                        } catch (_: IOException) {
-                            // Treated like a failed capture below: the counter does not move.
                         }
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
             } finally {
                 if (!submitted) {
                     queue.release()
-                    pendingStore.partFile(id).delete()
-                    pendingStore.delete(shot)
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        pendingStore.partFile(id).delete()
+                        pendingStore.delete(shot)
+                    }
                     cue(Cue.REFUSE)
-                    showLcd(context.getString(R.string.lcd_no_shot))
+                    showLcd(R.string.lcd_no_shot)
                 }
             }
         }
@@ -282,7 +289,7 @@ class ShooterViewModel(
     }
 
     /** The only place that sets `lcdMessage`: shows [message] for 2 s, replacing any earlier one. */
-    private fun showLcd(message: String) {
+    private fun showLcd(@StringRes message: Int) {
         lcdJob?.cancel()
         _state.update { it.copy(lcdMessage = message) }
         lcdJob = viewModelScope.launch {

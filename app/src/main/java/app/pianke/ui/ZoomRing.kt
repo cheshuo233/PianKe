@@ -3,7 +3,6 @@ package app.pianke.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -29,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -98,8 +96,14 @@ fun ZoomRing(stops: List<ZoomStop>, index: Int, onSelect: (Int) -> Unit) {
                             onDragCancel = { dragging = false },
                         ) { _, delta ->
                             dragDx += delta
-                            // Dragging right brings the lower stops in, like the canvas.
-                            currentOnSelect((dragStart - (dragDx / stopPx).roundToInt()).coerceIn(0, last))
+                            // Dragging right brings the lower stops in, like the canvas. One step per stop crossed, so a
+                            // fast fling still plays one NOTCH (and one setZoom) for each of them.
+                            val target = (dragStart - (dragDx / stopPx).roundToInt()).coerceIn(0, last)
+                            var k = currentIndex
+                            while (k != target) {
+                                k += if (target > k) 1 else -1
+                                currentOnSelect(k)
+                            }
                         }
                     },
                 ),
@@ -115,12 +119,7 @@ fun ZoomRing(stops: List<ZoomStop>, index: Int, onSelect: (Int) -> Unit) {
                     ),
                 ),
             )
-            Canvas(Modifier.align(Alignment.TopCenter).size(10.dp, 7.dp)) {
-                drawPath(
-                    Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() },
-                    Orange,
-                )
-            }
+            PointerTriangle(Modifier.align(Alignment.TopCenter), height = 7.dp)
         }
     }
 }

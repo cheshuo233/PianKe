@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.math.hypot
@@ -58,6 +57,7 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     private var camera: Camera? = null
     private var imageCapture: ImageCapture? = null
     private var rebound = false
+    private var zoomRatio = 1f
     private var observed: LiveData<CameraState>? = null
     private val stateObserver = Observer<CameraState> { onCameraState(it) }
     private val saveExecutor = Executors.newSingleThreadExecutor()
@@ -71,10 +71,13 @@ class CameraController(private val context: Context, private val owner: Lifecycl
         this.flash = flash
         this.surface = surface
         rebound = false
+        zoomRatio = 1f
         bindCurrent()
     }
 
+    /** Remembered, because CameraX goes back to 1x whenever the use cases detach (stop/start, rebind); OPEN re-applies it. */
     fun setZoom(stop: ZoomStop) {
+        zoomRatio = stop.ratio
         camera?.cameraControl?.setZoomRatio(stop.ratio)
     }
 
@@ -120,11 +123,7 @@ class CameraController(private val context: Context, private val owner: Lifecycl
         future.addListener({
             try {
                 bindNow(future.get())
-            } catch (_: ExecutionException) {
-                _issue.value = CameraIssue.Fatal
-            } catch (_: IllegalArgumentException) {
-                _issue.value = CameraIssue.Fatal
-            } catch (_: IllegalStateException) {
+            } catch (_: Exception) {
                 _issue.value = CameraIssue.Fatal
             }
         }, context.mainExecutor)
@@ -132,8 +131,6 @@ class CameraController(private val context: Context, private val owner: Lifecycl
 
     private fun bindNow(provider: ProcessCameraProvider) {
         val surface = surface ?: return
-        observed?.removeObserver(stateObserver)
-        observed = null
 
         val selector = if (lens == Lens.FRONT) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
         val info = checkNotNull(selector.filter(provider.availableCameraInfos).firstOrNull()) { "no camera for $lens" }
@@ -168,7 +165,13 @@ class CameraController(private val context: Context, private val owner: Lifecycl
             ZoomStops.available(ZoomStops.BACK, if (range == null) 1f..1f else range.lower..range.upper)
         }
 
-        observed = bound.cameraInfo.cameraState.also { it.observe(owner, stateObserver) }
+        // A rebind of the same camera keeps its observer: re-observing would replay the state it is recovering from.
+        val live = bound.cameraInfo.cameraState
+        if (live !== observed) {
+            observed?.removeObserver(stateObserver)
+            live.observe(owner, stateObserver)
+            observed = live
+        }
     }
 
     /** Rule 19: EDGE_MODE_OFF, NOISE_REDUCTION_MODE_MINIMAL, TONEMAP sRGB preset, each only if [chars] lists it. Applied to Preview and ImageCapture alike. */
@@ -211,7 +214,10 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     /** Rule 18 (spec 7): the only place CameraX error codes become a [CameraIssue]; FATAL-class errors rebind once before Fatal; an open camera clears the issue. */
     private fun onCameraState(state: CameraState) {
         when (state.error?.code) {
-            null -> if (state.type == CameraState.Type.OPEN) _issue.value = null
+            null -> if (state.type == CameraState.Type.OPEN) {
+                _issue.value = null
+                camera?.cameraControl?.setZoomRatio(zoomRatio)
+            }
             CameraState.ERROR_CAMERA_IN_USE, CameraState.ERROR_MAX_CAMERAS_IN_USE ->
                 _issue.value = CameraIssue.InUse
             CameraState.ERROR_CAMERA_DISABLED, CameraState.ERROR_DO_NOT_DISTURB_MODE_ENABLED ->
