@@ -130,6 +130,11 @@
     - `drive` 里绑定后复位到 `zoomRatio = 1f`（第 32 条）；
     - `drive` 里新增一个按 `zoomMode` 去重的收集：切到 STOPS 时，按第 31 条吸到最近一档；
   - `ui/ZoomStrip.kt`：§9.2 的外观和手感；
+    - mm 与倍率之间的换算只调用 `ZoomScale.ratio` / `ZoomScale.mm`：鼓的精确位置用 `ZoomScale.mm(ratio)`，`focalMm` 只用于左侧读数；
+  - 骨架评审的裁决 S1：「在档位上」只在一处判断：
+    - `ShooterUiState.stop` 先按倍率相等找，找不到再按 mm 等于 `focalMm` 找；
+    - 按倍率找到档位时，`focalMm` 显示该档位的 mm；
+    - `selectZoom` 的 NOTCH 分支用新状态的 `.stop?.ratio == 新倍率` 来判断；
   - `ui/CameraScreen.kt`：按 §9.2 改焦段小牌（不在档位上时用新文案「42mm · 1.8×」）；`zoomNoteRes` 改为接收 `stop`；
   - `ui/MenuScreen.kt`：「变焦方式」这一行。
 
@@ -145,10 +150,9 @@
 - 修改：
   - `ui/FilmDrawer.kt`：§9.3 的全部内容（几何、外观、跟手、惯性、吸附、关闭手势、开合、无障碍）；
   - `ui/ShooterViewModel.kt`：`selectFilmAt`、`openDrawer`、`closeDrawer`、`drawerStep`，`selectFilm` 改为调用 `selectFilmAt`；
-  - `ui/FilmRow.kt`：当前那卷的标签可点，点了调 `onOpen`；
-  - `ui/CameraScreen.kt`：
-    - 叠层和 45% 遮罩；
-    - 用 `BackHandler` 处理返回键：`drawer != CLOSED` 时启用，调用 `closeDrawer`。REQUIRED 时 ViewModel 什么都不做，返回键就被吃掉了。
+  - `ui/FilmRow.kt`：当前那卷的标签可点，点了调 `onOpen`（骨架里已接好）；标签解码用骨架评审抽出的 `rememberLabels`。
+  - `FilmDrawer` 还要负责 45% 遮罩、点外面关闭，以及 `drawer != CLOSED` 时启用的 `BackHandler`。三者都无条件调用 `onClose`；REQUIRED 的判断只在 `closeDrawer` 里，REQUIRED 时返回键被它吃掉。`CameraScreen` 只负责把 `FilmDrawer` 一直叠在最上层。
+    - 骨架评审的裁决：§4 的 `required: Boolean` 改为 `drawer: Drawer`，这样滑出动画留在 `FilmDrawer` 里。
 
 **落实**：§6 第 37、38 条，§8「换卷抽屉」，§9.1 的抽屉和胶片行两条，§9.3，§9.7 的抽屉部分，Review Focus 第 1 条。
 
