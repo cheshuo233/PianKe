@@ -36,6 +36,8 @@
     <string name="lcd_film_count">%1$02d/%2$d</string>
     <string name="lcd_shutter">1/%1$d</string>
     <string name="lcd_aperture">F%1$.1f</string>
+    <string name="lcd_shutter_long">%1$.1f″</string>
+    <string name="lcd_exposure_none">--</string>
     <string name="lcd_no_shot">未拍到</string>
     <string name="lcd_develop_failed">冲洗失败，已暂存</string>
     <string name="lcd_storage_full">存储已满</string>
@@ -58,7 +60,7 @@
     <string name="menu_tag">MENU</string>
     <string name="menu_close_desc">关闭菜单，返回取景</string>
     <string name="menu_group_shoot">拍摄</string>
-    <string name="menu_group_shoot_en">SHOOT</string>
+    <string name="menu_group_shoot_en">SHOOTING</string>
     <string name="menu_group_develop">冲洗</string>
     <string name="menu_group_develop_en">DEVELOP</string>
     <string name="menu_group_feedback">反馈</string>
@@ -91,5 +93,6 @@
     <string name="about_source">源码地址：%1$s</string>
     <string name="about_source_url">（仓库建好后填写）</string>
     <string name="about_credit">胶片模拟基于 spektrafilm 的光谱胶片模型，感谢其作者。</string>
+    <string name="about_fonts">字体 Share Tech Mono 与 IBM Plex Mono 以 SIL OFL 授权，授权文本随应用一起打包。</string>
     <string name="about_trademark">胶片名称仅用于说明所模拟的胶片，商标归各自所有者。</string>
 </resources>

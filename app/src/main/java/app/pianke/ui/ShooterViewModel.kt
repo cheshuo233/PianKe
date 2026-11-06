@@ -2,29 +2,56 @@ package app.pianke.ui
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import app.pianke.PiankeApp
+import androidx.lifecycle.viewModelScope
+import app.pianke.R
 import app.pianke.camera.CameraController
 import app.pianke.camera.PreviewRenderer
 import app.pianke.develop.DevelopQueue
 import app.pianke.develop.Developer
+import app.pianke.develop.KeptReason
+import app.pianke.develop.Outcome
 import app.pianke.develop.PendingStore
+import app.pianke.develop.Shot
+import app.pianke.feedback.Cue
 import app.pianke.feedback.Feedback
 import app.pianke.film.FilmCatalog
+import app.pianke.settings.FlashMode
+import app.pianke.settings.Lens
+import app.pianke.settings.Roll
 import app.pianke.settings.Settings
 import app.pianke.settings.SettingsStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.time.LocalDateTime
 
 /**
  * Orchestrates camera, develop, settings and feedback (spec sections 5 and 8).
  *
- * Process-scoped collaborators come in through the constructor. [CameraController] and [PreviewRenderer] are
- * Activity-scoped, so they are never fields of this class: [drive] receives them for as long as the composition
- * lives, and [onShutter], [selectStop] and the rest reach the camera only through what [drive] holds while it
- * runs (hand-off H2).
+ * Who collects what:
+ * - `init` (viewModelScope) owns the process-scoped flows: the one-shot film resolution, then `settings` ->
+ *   `state.settings` (never touching `filmIndex` again), `inFlight` -> `developing`, and `outcomes` ->
+ *   `lastPhoto` / LCD, then `developer.latest()`.
+ * - From then on this class owns `state.filmIndex`: [selectFilm] sets it synchronously.
+ * - [drive] owns only the Activity-scoped work, as side effects of state on the camera and the renderer.
  *
- * `init` subscribes to `queue.outcomes` first (Saved -> lastPhoto; Kept -> LCD notice) and only then calls
- * `developer.latest()` on Dispatchers.IO (H8).
+ * [CameraController] and [PreviewRenderer] belong to the Activity (H2). The renderer is only touched inside
+ * [drive]; the controller is also held in [camera] while [drive] runs, so [onShutter] and [selectStop] can reach it.
  */
 class ShooterViewModel(
     private val context: Context,
@@ -36,49 +63,241 @@ class ShooterViewModel(
     private val queue: DevelopQueue,
 ) : ViewModel() {
 
-    val state: StateFlow<ShooterUiState> get() = TODO()
+    private val _state = MutableStateFlow(
+        ShooterUiState(
+            films = catalog.films, filmIndex = 0,
+            settings = Settings(),
+            stops = emptyList(), stopIndex = 0,
+            exposure = null,
+            issue = null, permission = Permission.UNKNOWN,
+            developing = 0, lcdMessage = null, lastPhoto = null,
+        ),
+    )
+    val state: StateFlow<ShooterUiState> = _state.asStateFlow()
+
+    /** Set only by [drive], cleared by identity when that `drive` ends. */
+    private var camera: CameraController? = null
+
+    /** True from the press until `capture` returns. Main thread only. */
+    private var capturing = false
+
+    private var lcdJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            // Hand-off H7 / Review Focus 5: the only filmOrFirst call in ui; an unknown or missing id is written back.
+            val saved = settingsStore.settings.first()
+            val film = catalog.filmOrFirst(saved.filmId)
+            if (film.id != saved.filmId) settingsStore.update { it.copy(filmId = film.id) }
+            _state.update { it.copy(filmIndex = film.index, settings = saved) }
+            settingsStore.settings.collect { settings -> _state.update { it.copy(settings = settings) } }
+        }
+        viewModelScope.launch {
+            queue.inFlight.collect { count -> _state.update { it.copy(developing = count) } }
+        }
+        viewModelScope.launch {
+            // Hand-off H8: subscribe first (replay is 0), then ask for the latest photo off the main thread.
+            queue.outcomes
+                .onSubscription {
+                    val latest = withContext(Dispatchers.IO) { developer.latest() }
+                    _state.update { if (it.lastPhoto == null) it.copy(lastPhoto = latest) else it }
+                }
+                .collect { (_, outcome) ->
+                    when (outcome) {
+                        is Outcome.Saved -> _state.update { it.copy(lastPhoto = outcome.uri) }
+                        is Outcome.Kept -> showLcd(
+                            context.getString(
+                                if (outcome.reason == KeptReason.STORAGE_FULL) R.string.lcd_storage_full
+                                else R.string.lcd_develop_failed,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
 
     /**
-     * Runs until cancelled (the caller's `LaunchedEffect` keyed on [camera]). While it runs it:
-     * - resolves `Settings.filmId` through `catalog.filmOrFirst` and writes the resolved id back if it differed
-     *   (Review Focus 5), then calls `renderer.setFilm` for that film (H3) and again on every film change;
-     * - calls `renderer.setGrain` and `camera.setFlash` on settings changes;
-     * - binds the camera once permission is GRANTED and again on a lens change;
-     * - on each `camera.stops` emission, resets the ring to the ratio-1 stop (H4, the only place);
-     * - mirrors `camera.issue` and `camera.exposure` into [state].
-     * On exit (finally) it drops its references to [camera] and [renderer].
+     * Runs until cancelled (the caller's `LaunchedEffect`, keyed on [camera]). Performs the Activity-scoped side
+     * effects of state:
+     * - the film index -> `renderer.setFilm`, the only call; its first emission is H3, also after recreation;
+     * - grain -> `setGrain`, flash -> `setFlash`;
+     * - distinct (permission granted, lens) -> `bind`; never rebinds for other settings changes;
+     * - `camera.stops` -> the H4 reset of the ring to the ratio-1 stop (the only place);
+     * - `camera.issue` and `camera.exposure` -> state.
      */
-    suspend fun drive(camera: CameraController, renderer: PreviewRenderer): Nothing = TODO()
+    suspend fun drive(camera: CameraController, renderer: PreviewRenderer): Nothing {
+        this.camera = camera
+        try {
+            coroutineScope {
+                launch {
+                    _state.map { it.filmIndex }.distinctUntilChanged().collect { index ->
+                        renderer.setFilm(catalog.lut(catalog.films[index]), catalog.lutSize)
+                    }
+                }
+                launch {
+                    _state.map { it.settings.grain.scale }.distinctUntilChanged().collect(renderer::setGrain)
+                }
+                launch {
+                    _state.map { it.settings.flash }.distinctUntilChanged().collect(camera::setFlash)
+                }
+                launch {
+                    _state.map { (it.permission == Permission.GRANTED) to it.settings.lens }
+                        .distinctUntilChanged()
+                        .collect { (granted, lens) ->
+                            if (granted) camera.bind(lens, _state.value.settings.flash, renderer.surfaceProvider)
+                        }
+                }
+                launch {
+                    camera.stops.collect { stops ->
+                        // CameraX starts at ratio 1 after a bind, so this sets the index only: no setZoom, no cue.
+                        val unit = stops.indexOfFirst { it.ratio == 1f }.coerceAtLeast(0)
+                        _state.update { it.copy(stops = stops, stopIndex = unit) }
+                    }
+                }
+                launch { camera.issue.collect { issue -> _state.update { it.copy(issue = issue) } } }
+                launch { camera.exposure.collect { e -> _state.update { it.copy(exposure = e) } } }
+            }
+            awaitCancellation()
+        } finally {
+            if (this.camera === camera) this.camera = null
+        }
+    }
 
-    fun onPermission(permission: Permission): Unit = TODO()
+    fun onPermission(permission: Permission) {
+        _state.update { it.copy(permission = permission) }
+    }
 
-    /** Wraps modulo the film count. The fan lives in FilmRow; this is only the selection. */
-    fun selectFilm(delta: Int): Unit = TODO()
-
-    fun selectFilmIndex(index: Int): Unit = TODO()
+    /**
+     * The only film-selection entry. Wraps modulo the film count, updates the index synchronously (the LUT follows
+     * immediately through [drive]), plays NOTCH, and persists the id asynchronously.
+     */
+    fun selectFilm(delta: Int) {
+        val films = catalog.films
+        val next = Math.floorMod(_state.value.filmIndex + delta, films.size)
+        _state.update { it.copy(filmIndex = next) }
+        cue(Cue.NOTCH)
+        viewModelScope.launch { settingsStore.update { it.copy(filmId = films[next].id) } }
+    }
 
     /** The one zoom-stepping entry: no-op for the current index, else `setZoom` + NOTCH. */
-    fun selectStop(index: Int): Unit = TODO()
+    fun selectStop(index: Int) {
+        val camera = camera ?: return
+        val current = _state.value
+        if (index == current.stopIndex) return
+        val stop = current.stops.getOrNull(index) ?: return
+        _state.update { it.copy(stopIndex = index) }
+        camera.setZoom(stop)
+        cue(Cue.NOTCH)
+    }
 
     /**
      * Spec section 8 shutter flow, the only place it is written. [rotation] is a Surface.ROTATION_* value
-     * from the Activity's orientation listener. Ignored while a capture is outstanding.
+     * from the Activity's orientation listener. Ignored while a capture is outstanding. Every path after
+     * `tryReserve` ends in `submit` or `release`, even if this scope is cancelled mid-shot.
      */
-    fun onShutter(rotation: Int): Unit = TODO()
+    fun onShutter(rotation: Int) {
+        val camera = camera ?: return
+        if (capturing) return
+        if (!queue.tryReserve()) {
+            cue(Cue.REFUSE)
+            return
+        }
+        capturing = true
+        val current = _state.value
+        val id = System.currentTimeMillis().toString()
+        val shot = Shot(
+            id = id,
+            filmId = current.films[current.filmIndex].id,
+            framing = current.settings.framing,
+            dateStamp = current.settings.dateStamp,
+            grain = current.settings.grain,
+            halation = current.settings.halation,
+            capturedAt = LocalDateTime.now(),
+        )
+        cue(Cue.SHUTTER)
+        viewModelScope.launch {
+            var submitted = false
+            try {
+                val captured = try {
+                    camera.capture(pendingStore.partFile(id), rotation)
+                } finally {
+                    capturing = false
+                }
+                if (captured) {
+                    withContext(NonCancellable) {
+                        try {
+                            pendingStore.commit(shot)
+                            var rewound = false
+                            settingsStore.update {
+                                val next = Roll.next(it.frame)
+                                rewound = next == 1
+                                it.withFrame(next)
+                            }
+                            cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
+                            queue.submit(shot)
+                            submitted = true
+                        } catch (_: IOException) {
+                            // Treated like a failed capture below: the counter does not move.
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } finally {
+                if (!submitted) {
+                    queue.release()
+                    pendingStore.partFile(id).delete()
+                    pendingStore.delete(shot)
+                    cue(Cue.REFUSE)
+                    showLcd(context.getString(R.string.lcd_no_shot))
+                }
+            }
+        }
+    }
 
-    /** Switches lens; the roll counter follows the lens (state derives it from `Settings.lens`). */
-    fun flipLens(): Unit = TODO()
+    fun flipLens() {
+        viewModelScope.launch {
+            settingsStore.update { it.copy(lens = if (it.lens == Lens.BACK) Lens.FRONT else Lens.BACK) }
+        }
+    }
 
-    fun cycleFlash(): Unit = TODO()
+    fun cycleFlash() {
+        viewModelScope.launch {
+            settingsStore.update {
+                it.copy(
+                    flash = when (it.flash) {
+                        FlashMode.AUTO -> FlashMode.ON
+                        FlashMode.ON -> FlashMode.OFF
+                        FlashMode.OFF -> FlashMode.AUTO
+                    },
+                )
+            }
+        }
+    }
 
     /** MENU writes go through here so the NOTCH cue is played in one place. */
-    fun updateSettings(transform: (Settings) -> Settings): Unit = TODO()
+    fun updateSettings(transform: (Settings) -> Settings) {
+        cue(Cue.NOTCH)
+        viewModelScope.launch { settingsStore.update(transform) }
+    }
 
     /** The only place that sets `lcdMessage`: shows [message] for 2 s, replacing any earlier one. */
-    private fun showLcd(message: String): Unit = TODO()
+    private fun showLcd(message: String) {
+        lcdJob?.cancel()
+        _state.update { it.copy(lcdMessage = message) }
+        lcdJob = viewModelScope.launch {
+            delay(LCD_MESSAGE_MS)
+            _state.update { it.copy(lcdMessage = null) }
+        }
+    }
 
-    companion object {
-        /** Call only when `app.catalog` is non-null (MainActivity shows the broken notice otherwise). */
-        fun factory(app: PiankeApp): ViewModelProvider.Factory = TODO()
+    /** The one place feedback is played, with the current sound and vibration switches. */
+    private fun cue(cue: Cue) {
+        val settings = _state.value.settings
+        feedback.play(cue, settings.shutterSound, settings.vibration)
+    }
+
+    private companion object {
+        const val LCD_MESSAGE_MS = 2_000L
     }
 }

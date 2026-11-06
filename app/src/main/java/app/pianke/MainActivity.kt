@@ -1,35 +1,53 @@
 package app.pianke
 
+import android.graphics.Color
+import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.view.OrientationEventListener
 import android.view.Surface
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.pianke.camera.CameraController
 import app.pianke.camera.PreviewRenderer
+import app.pianke.film.FilmCatalog
 import app.pianke.ui.CameraScreen
+import app.pianke.ui.Ink
 import app.pianke.ui.MenuScreen
 import app.pianke.ui.PermissionGate
+import app.pianke.ui.REFERENCE_WIDTH_DP
 import app.pianke.ui.ShooterViewModel
+import app.pianke.ui.bodyBackground
 
 /**
- * Owns the Activity-scoped [CameraController] and [PreviewRenderer] (H2) and the orientation listener, and routes
- * between the broken-catalog notice, the permission gate, the shooting screen and the MENU.
+ * Owns the Activity-scoped [CameraController], [PreviewRenderer] and GLSurfaceView (H2, H6) and the orientation
+ * listener, scales the whole UI to the 390 dp reference, and routes between the broken-catalog notice, the
+ * permission gate and the shooting screen with the MENU as an overlay (the GL view is never destroyed).
  */
 class MainActivity : ComponentActivity() {
     private val camera = CameraController(this, this)
     private val renderer = PreviewRenderer()
+    private val preview by lazy { GLSurfaceView(this) }
 
     /** Latest device orientation as a Surface.ROTATION_*; read at shutter time. */
     private var rotation = Surface.ROTATION_0
@@ -44,23 +62,34 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val bars = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+        renderer.attach(preview)
         val app = application as PiankeApp
         setContent {
-            if (app.catalog == null) {
-                BrokenCatalogNotice()
-            } else {
-                val viewModel = viewModel<ShooterViewModel>(factory = ShooterViewModel.factory(app))
-                val state by viewModel.state.collectAsState()
-                var menuOpen by rememberSaveable { mutableStateOf(false) }
-                LaunchedEffect(viewModel) { viewModel.drive(camera, renderer) }
-                PermissionGate(state.permission, viewModel::onPermission) {
-                    if (menuOpen) {
-                        MenuScreen(state.settings, viewModel::updateSettings) { menuOpen = false }
-                    } else {
-                        CameraScreen(state, viewModel, renderer, { rotation }) { menuOpen = true }
-                    }
-                }
+            val density = LocalDensity.current
+            val widthDp = LocalConfiguration.current.screenWidthDp
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density * widthDp / REFERENCE_WIDTH_DP, density.fontScale),
+            ) {
+                val catalog = app.catalog
+                if (catalog == null) BrokenCatalogNotice() else Shooter(app, catalog)
+            }
+        }
+    }
+
+    @Composable
+    private fun Shooter(app: PiankeApp, catalog: FilmCatalog) {
+        val viewModel = viewModel {
+            ShooterViewModel(app, catalog, app.settingsStore, app.feedback, app.pendingStore, app.developer!!, app.queue!!)
+        }
+        val state by viewModel.state.collectAsState()
+        var menuOpen by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(camera) { viewModel.drive(camera, renderer) }
+        PermissionGate(state.permission, viewModel::onPermission) {
+            Box {
+                CameraScreen(state, viewModel, preview, { rotation }) { menuOpen = true }
+                if (menuOpen) MenuScreen(state.settings, viewModel::updateSettings) { menuOpen = false }
             }
         }
     }
@@ -68,6 +97,16 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         orientationListener.enable()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        preview.onResume()
+    }
+
+    override fun onPause() {
+        preview.onPause()
+        super.onPause()
     }
 
     override fun onStop() {
@@ -86,5 +125,7 @@ private fun surfaceRotation(degrees: Int): Int = when (degrees) {
 
 @Composable
 private fun BrokenCatalogNotice() {
-    BasicText(stringResource(R.string.catalog_broken))
+    Box(Modifier.bodyBackground(), contentAlignment = Alignment.Center) {
+        BasicText(stringResource(R.string.catalog_broken), style = TextStyle(fontSize = 18.sp, color = Ink))
+    }
 }
