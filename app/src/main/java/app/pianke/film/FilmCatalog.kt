@@ -13,6 +13,9 @@ class FilmCatalog private constructor(val films: List<Film>, private val handle:
     /** The one LUT byte source for both the viewfinder and the developed photo. */
     fun lut(film: Film): ByteBuffer = FilmEngine.lut(handle, film.index)
 
+    /** The one place for the rule: unknown or null id means the first film. */
+    fun filmOrFirst(id: String?): Film = films.firstOrNull { it.id == id } ?: films.first()
+
     fun develop(
         film: Film,
         grainScale: Float,
