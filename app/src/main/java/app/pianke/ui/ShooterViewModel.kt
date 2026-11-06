@@ -294,7 +294,7 @@ class ShooterViewModel(
     /** The one place feedback is played, with the current sound and vibration switches. */
     private fun cue(cue: Cue) {
         val settings = _state.value.settings
-        feedback.play(cue, settings.shutterSound, settings.vibration)
+        feedback.play(cue, settings.shutterSound, settings.vibration, settings.soundVolume.gain)
     }
 
     private companion object {

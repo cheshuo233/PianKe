@@ -8,6 +8,9 @@ enum class GrainLevel(val scale: Float) { OFF(0f), LOW(0.5f), NORMAL(1f), HIGH(1
 
 enum class Lens { BACK, FRONT }
 
+/** The gain of the sounds the app plays itself; the system's forced shutter sound is not scaled by it. */
+enum class SoundVolume(val gain: Float) { LOW(0.3f), MEDIUM(0.6f), HIGH(1.0f) }
+
 /** Contract K6: DataStore keys are these property names, enums are stored by `name`; keys may be added, never renamed. */
 data class Settings(
     val filmId: String? = null,            // null: the first roll; an id, not an index, so reordering films.toml cannot shift it
@@ -18,6 +21,7 @@ data class Settings(
     val halation: Boolean = true,
     val shutterSound: Boolean = true,
     val vibration: Boolean = true,
+    val soundVolume: SoundVolume = SoundVolume.MEDIUM,
     val flash: FlashMode = FlashMode.AUTO,
     val lens: Lens = Lens.BACK,
     val rollBack: Int = 1,                 // number of the next frame, 1..36

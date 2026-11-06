@@ -50,6 +50,7 @@ import app.pianke.R
 import app.pianke.settings.Framing
 import app.pianke.settings.GrainLevel
 import app.pianke.settings.Settings
+import app.pianke.settings.SoundVolume
 
 private val CardInk = Color(0xFF2E2A26)
 private val CardMuted = Color(0xFF6E665A)
@@ -146,6 +147,16 @@ private fun Groups(settings: Settings, shutterSoundForced: Boolean, version: Str
             R.string.menu_shutter_sound, settings.shutterSound || shutterSoundForced,
             enabled = !shutterSoundForced, note = if (shutterSoundForced) R.string.menu_shutter_sound_forced else null,
         ) { on -> onUpdate { it.copy(shutterSound = on) } }
+        ValueRow(
+            R.string.menu_volume,
+            stringResource(
+                when (settings.soundVolume) {
+                    SoundVolume.LOW -> R.string.menu_volume_low
+                    SoundVolume.MEDIUM -> R.string.menu_volume_medium
+                    SoundVolume.HIGH -> R.string.menu_volume_high
+                },
+            ),
+        ) { onUpdate { it.copy(soundVolume = SoundVolume.entries[(it.soundVolume.ordinal + 1) % SoundVolume.entries.size]) } }
         ToggleRow(R.string.menu_vibration, settings.vibration) { on -> onUpdate { it.copy(vibration = on) } }
     }
     Group(R.string.menu_group_others_en, R.string.menu_group_others) {

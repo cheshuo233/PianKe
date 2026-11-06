@@ -77,7 +77,11 @@
     <string name="menu_grain_high">强</string>
     <string name="menu_halation">光晕</string>
     <string name="menu_shutter_sound">快门声</string>
-    <string name="menu_shutter_sound_forced">本机要求快门声</string>
+    <string name="menu_shutter_sound_forced">快门声由系统控制，音量随系统音量调节</string>
+    <string name="menu_volume">音量</string>
+    <string name="menu_volume_low">低</string>
+    <string name="menu_volume_medium">中</string>
+    <string name="menu_volume_high">高</string>
     <string name="menu_vibration">震动</string>
     <string name="menu_about">关于片刻</string>
     <string name="menu_footer_name">片刻</string>

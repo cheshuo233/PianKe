@@ -49,13 +49,17 @@ class Feedback(context: Context) {
         Log.i(TAG, "shutterSoundForced=$shutterSoundForced")
     }
 
-    fun play(cue: Cue, sound: Boolean, vibration: Boolean) {
+    /**
+     * [volume] (0..1) scales every sound this class plays through its own pool; the forced system shutter sound
+     * goes through the system stream and is not scaled. That split is decided only here.
+     */
+    fun play(cue: Cue, sound: Boolean, vibration: Boolean, volume: Float) {
         if (cue == Cue.SHUTTER && shutterSoundForced) {
             Log.i(TAG, "SHUTTER: MediaActionSound (forced)")
             forcedShutter.play(MediaActionSound.SHUTTER_CLICK)
         } else if (sound && audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
             if (cue == Cue.SHUTTER) Log.i(TAG, "SHUTTER: pool sound")
-            sounds[cue]?.let { pool.play(it, 1f, 1f, 1, 0, 1f) }
+            sounds[cue]?.let { pool.play(it, volume, volume, 1, 0, 1f) }
         } else if (cue == Cue.SHUTTER) {
             Log.i(TAG, "SHUTTER: silent")
         }
