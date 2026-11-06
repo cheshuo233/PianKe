@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">片刻</string>
+    <string name="catalog_broken">胶片库损坏，请重新安装</string>
+</resources>
