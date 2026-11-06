@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,8 +54,12 @@ fun PermissionGate(permission: Permission, onChange: (Permission) -> Unit, conte
 
     // The rationale flag before the request: true only after an earlier denial. Dismissing the very first dialog
     // leaves it false before and after, and must not count as "don't ask again".
+    // askedBefore covers a permanent denial from an earlier run: the flag is false before and after then, so one
+    // request must pass first (cold start: two taps before 打开设置 shows; no persisted flag on purpose).
+    var askedBefore by rememberSaveable { mutableStateOf(false) }
     var deniedBefore by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        askedBefore = true
         onChange(
             when {
                 ok -> Permission.GRANTED
@@ -64,7 +69,7 @@ fun PermissionGate(permission: Permission, onChange: (Permission) -> Unit, conte
         )
     }
     fun request() {
-        deniedBefore = rationale()
+        deniedBefore = rationale() || askedBefore
         launcher.launch(Manifest.permission.CAMERA)
     }
     LaunchedEffect(Unit) { if (!granted()) request() }
