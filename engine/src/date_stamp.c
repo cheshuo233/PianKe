@@ -1,7 +1,6 @@
-/* Date stamp: "'YY MM DD" in orange seven-segment digits with a glow, procedurally drawn (no font).
+/* Date stamp: "'YY MM DD" in orange seven-segment digits, procedurally drawn (no font).
  * Owns the stamp's layout (size from the short side, margin, position bottom-right), the digit shapes
- * and the orange. The rest of the image is never written. Everything is alpha blended over the
- * photo, so no channel can leave 0..255. */
+ * and the orange. The rest of the image is never written. */
 #include "date_stamp.h"
 #include "pixel.h"
 
@@ -11,7 +10,6 @@
 #define STAMP_TEXT_LEN 9
 
 static const uint8_t ORANGE[3] = {255, 128, 16};
-#define GLOW_ALPHA 64 /* of 255, over a ring one stroke wide around every segment */
 
 /* Segments of a digit, bit set = lit: a top, b upper right, c lower right, d bottom, e lower left,
  * f upper left, g middle. */
@@ -36,11 +34,10 @@ static int stroke(int h);
 /* Writes "'YY MM DD" (STAMP_TEXT_LEN chars + NUL) for date; every field is shown modulo 100. */
 static void format_date(const fe_date_t *date, char out[STAMP_TEXT_LEN + 1]);
 
-/* Blend orange over the rectangle [x0,x1) x [y0,y1) with alpha 0..255, clipped to the image. */
-static void blend_rect(fe_image_t *image, int x0, int y0, int x1, int y1, int alpha);
+/* Paint the rectangle [x0,x1) x [y0,y1) orange, clipped to the image. */
+static void fill_rect(fe_image_t *image, int x0, int y0, int x1, int y1);
 
-/* Draw one glyph (digit, apostrophe or space) with its top-left at (x, y), digit height h:
- * a faint wide pass for the glow, then the segments at full strength. */
+/* Draw one glyph (digit, apostrophe or space) with its top-left at (x, y), digit height h. */
 static void draw_glyph(fe_image_t *image, int x, int y, int h, char ch);
 
 static int digit_width(int h)
@@ -68,7 +65,7 @@ static void format_date(const fe_date_t *date, char out[STAMP_TEXT_LEN + 1])
     out[n] = '\0';
 }
 
-static void blend_rect(fe_image_t *image, int x0, int y0, int x1, int y1, int alpha)
+static void fill_rect(fe_image_t *image, int x0, int y0, int x1, int y1)
 {
     x0 = x0 < 0 ? 0 : x0;
     y0 = y0 < 0 ? 0 : y0;
@@ -78,7 +75,7 @@ static void blend_rect(fe_image_t *image, int x0, int y0, int x1, int y1, int al
         uint8_t *px = fe_pixel(image, (uint32_t)x0, (uint32_t)y);
         for (int x = x0; x < x1; x++, px += fe_pixel_step(image)) {
             for (int c = 0; c < 3; c++) {
-                px[c] = (uint8_t)((px[c] * (255 - alpha) + ORANGE[c] * alpha + 127) / 255);
+                px[c] = ORANGE[c];
             }
         }
     }
@@ -116,11 +113,8 @@ static void draw_glyph(fe_image_t *image, int x, int y, int h, char ch)
             }
         }
     }
-    for (int i = 0; i < n; i++) { /* glow: the ring around each rectangle, faint */
-        blend_rect(image, x + rects[i][0] - t, y + rects[i][1] - t, x + rects[i][2] + t, y + rects[i][3] + t, GLOW_ALPHA);
-    }
-    for (int i = 0; i < n; i++) { /* core */
-        blend_rect(image, x + rects[i][0], y + rects[i][1], x + rects[i][2], y + rects[i][3], 255);
+    for (int i = 0; i < n; i++) {
+        fill_rect(image, x + rects[i][0], y + rects[i][1], x + rects[i][2], y + rects[i][3]);
     }
 }
 
