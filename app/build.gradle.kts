@@ -37,6 +37,11 @@ android {
     // The golden inputs and expectations live in tests/engine/golden; the instrumented test reads them as assets.
     sourceSets.getByName("androidTest").assets.directories.add("../tests/engine/golden")
 
+    testOptions {
+        // PendingStore logs through android.util.Log; the JVM unit test gets no-op logging.
+        unitTests.isReturnDefaultValues = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -55,6 +60,8 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
