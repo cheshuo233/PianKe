@@ -1,5 +1,5 @@
-/* Halation: bright areas bleed a tinted glow. Owns the highlight threshold and the 96x96 working
- * resolution; the film only supplies strength, radius (in 96x96 pixels) and tint.
+/* Halation: bright areas bleed a tinted glow. Owns the highlight threshold and the energy-map
+ * resolution (long side THUMB_LONG cells); the film only supplies strength, radius (in map cells) and tint.
  * Pipeline: gather highlights -> average down to a map whose long side is THUMB_LONG cells and whose
  * short side keeps the image aspect (D1: square cells, so the glow is round) -> blur -> add back,
  * bilinearly upscaled, tinted and scaled by strength, saturating at 255. Works for any image size >= 1x1;
@@ -36,6 +36,10 @@ static void axis_sample(const axis_t *axis, uint32_t *i0, uint32_t *i1, uint32_t
 /* Average image down to the energy map (dims.w x dims.h); pixels below the threshold count as 0. */
 static void gather_highlights(const fe_image_t *image, thumb_dims_t dims, uint8_t *thumb);
 
+/* One box-blur pass: `lines` lines of `len` cells; element i of line l is src[l * line_step + i * elem_step]. */
+static void blur_pass(const uint8_t *src, uint8_t *dst, size_t elem_step, size_t line_step, uint32_t lines,
+                      uint32_t len, unsigned radius);
+
 /* Box blur of the map, radius 0..255 in map cells (the window is clipped to the map, light that
  * leaves the map is lost); scratch is another dims.w * dims.h bytes. */
 static void blur_thumb(uint8_t *thumb, uint8_t *scratch, thumb_dims_t dims, unsigned radius);
@@ -45,8 +49,11 @@ static void composite_glow(fe_image_t *image, const uint8_t *thumb, thumb_dims_t
 
 static thumb_dims_t thumb_dims(const fe_image_t *image)
 {
-    (void)image; /* PHASE B */
-    thumb_dims_t dims = {THUMB_LONG, THUMB_LONG};
+    const uint32_t w = image->width, h = image->height;
+    const uint32_t lng = w > h ? w : h, sht = w > h ? h : w;
+    uint32_t cells = (THUMB_LONG * sht + lng / 2u) / lng; /* round(THUMB_LONG * short / long) */
+    cells = cells < 1u ? 1u : cells;
+    thumb_dims_t dims = {w >= h ? THUMB_LONG : cells, w >= h ? cells : THUMB_LONG};
     return dims;
 }
 
@@ -85,25 +92,100 @@ static void axis_sample(const axis_t *axis, uint32_t *i0, uint32_t *i1, uint32_t
 
 static void gather_highlights(const fe_image_t *image, thumb_dims_t dims, uint8_t *thumb)
 {
-    (void)image; /* PHASE B */
-    (void)dims;
-    (void)thumb;
+    const uint32_t w = image->width, h = image->height;
+    /* Cell columns [xlo, xhi): width / dims.w pixels, at least one (so images narrower than the map work). */
+    uint16_t xlo[THUMB_LONG], xhi[THUMB_LONG];
+    for (uint32_t cx = 0; cx < dims.w; cx++) {
+        const uint32_t lo = cx * w / dims.w, hi = (cx + 1u) * w / dims.w;
+        xlo[cx] = (uint16_t)lo;
+        xhi[cx] = (uint16_t)(hi > lo ? hi : lo + 1u);
+    }
+    const unsigned step = fe_pixel_step(image);
+    for (uint32_t cy = 0; cy < dims.h; cy++) {
+        const uint32_t ylo = cy * h / dims.h;
+        uint32_t yhi = (cy + 1u) * h / dims.h;
+        if (yhi <= ylo) {
+            yhi = ylo + 1u;
+        }
+        uint32_t energy[THUMB_LONG] = {0};
+        for (uint32_t y = ylo; y < yhi; y++) {
+            for (uint32_t cx = 0; cx < dims.w; cx++) {
+                uint32_t sum = 0;
+                const uint8_t *px = fe_pixel(image, xlo[cx], y);
+                for (uint32_t x = xlo[cx]; x < xhi[cx]; x++, px += step) {
+                    const unsigned luma = fe_luma(px[0], px[1], px[2]);
+                    if (luma >= HIGHLIGHT_THRESHOLD) {
+                        sum += (luma - HIGHLIGHT_THRESHOLD) * 255u / (255u - HIGHLIGHT_THRESHOLD);
+                    }
+                }
+                energy[cx] += sum;
+            }
+        }
+        for (uint32_t cx = 0; cx < dims.w; cx++) {
+            thumb[cy * dims.w + cx] = (uint8_t)(energy[cx] / ((uint32_t)(xhi[cx] - xlo[cx]) * (yhi - ylo)));
+        }
+    }
+}
+
+static void blur_pass(const uint8_t *src, uint8_t *dst, size_t elem_step, size_t line_step, uint32_t lines,
+                      uint32_t len, unsigned radius)
+{
+    const unsigned width = 2u * radius + 1u;
+    for (size_t line = 0; line < lines; line++) {
+        const uint8_t *in = src + line * line_step;
+        uint8_t *out = dst + line * line_step;
+        unsigned prefix[THUMB_LONG + 1u];
+        prefix[0] = 0;
+        for (unsigned i = 0; i < len; i++) {
+            prefix[i + 1u] = prefix[i] + in[i * elem_step];
+        }
+        for (unsigned i = 0; i < len; i++) {
+            const unsigned lo = i > radius ? i - radius : 0u;
+            const unsigned hi = i + radius < len - 1u ? i + radius : len - 1u;
+            out[i * elem_step] = (uint8_t)((prefix[hi + 1u] - prefix[lo] + width / 2u) / width);
+        }
+    }
 }
 
 static void blur_thumb(uint8_t *thumb, uint8_t *scratch, thumb_dims_t dims, unsigned radius)
 {
-    (void)thumb; /* PHASE B */
-    (void)scratch;
-    (void)dims;
-    (void)radius;
+    blur_pass(thumb, scratch, 1u, dims.w, dims.h, dims.w, radius);   /* along rows */
+    blur_pass(scratch, thumb, dims.w, 1u, dims.w, dims.h, radius);   /* along columns */
 }
 
 static void composite_glow(fe_image_t *image, const uint8_t *thumb, thumb_dims_t dims, const fe_film_t *film)
 {
-    (void)image; /* PHASE B */
-    (void)thumb;
-    (void)dims;
-    (void)film;
+    /* Per channel gain, Q16: strength (Q8, 0..256) * tint (0..255). */
+    const uint32_t strength = (uint32_t)(film->halation_strength * 256.0f + 0.5f);
+    uint32_t gain[3];
+    for (int c = 0; c < 3; c++) {
+        gain[c] = strength * film->halation_tint[c];
+    }
+    const unsigned step = fe_pixel_step(image);
+    uint8_t line[THUMB_LONG]; /* the map interpolated vertically for the current image row */
+    axis_t ay;
+    axis_init(&ay, image->height, dims.h);
+    for (uint32_t y = 0; y < image->height; y++, axis_next(&ay)) {
+        uint32_t y0, y1, fy;
+        axis_sample(&ay, &y0, &y1, &fy);
+        for (uint32_t i = 0; i < dims.w; i++) {
+            line[i] = (uint8_t)((thumb[y0 * dims.w + i] * (256u - fy) + thumb[y1 * dims.w + i] * fy + 128u) >> 8);
+        }
+        uint8_t *px = fe_pixel(image, 0, y);
+        axis_t ax;
+        axis_init(&ax, image->width, dims.w);
+        for (uint32_t x = 0; x < image->width; x++, axis_next(&ax), px += step) {
+            uint32_t x0, x1, fx;
+            axis_sample(&ax, &x0, &x1, &fx);
+            const uint32_t glow = (line[x0] * (256u - fx) + line[x1] * fx + 128u) >> 8;
+            if (glow == 0) {
+                continue;
+            }
+            for (int c = 0; c < 3; c++) {
+                px[c] = fe_clamp_u8((int)px[c] + (int)((glow * gain[c] + 32768u) >> 16));
+            }
+        }
+    }
 }
 
 fe_err_t fe_halation_apply(const fe_film_t *film, fe_image_t *image, const fe_allocator_t *alloc)

@@ -13,11 +13,6 @@ static inline uint8_t *fe_pixel(const fe_image_t *image, uint32_t x, uint32_t y)
     return image->pixels + (size_t)y * image->stride + (size_t)x * image->channels;
 }
 
-static inline uint8_t *fe_row(const fe_image_t *image, uint32_t y)
-{
-    return fe_pixel(image, 0, y);
-}
-
 static inline unsigned fe_pixel_step(const fe_image_t *image)
 {
     return image->channels;

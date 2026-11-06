@@ -21,9 +21,9 @@ typedef struct {
     const char    *id;
     const char    *name;
     float          grain_strength;    /* 0..1 */
-    float          grain_size;        /* px */
+    float          grain_size;        /* px on a 768 px short side; scaled to the image */
     float          halation_strength; /* 0..1 */
-    uint8_t        halation_radius;
+    uint8_t        halation_radius;   /* map cells (see halation.c) */
     uint8_t        halation_tint[3];
     uint8_t        lut_size;
     const uint8_t *lut;               /* points straight into the films.bin data, not copied */
