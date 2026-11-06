@@ -189,7 +189,10 @@ class ShooterViewModel(
      * [drive]), plays NOTCH, persists the id asynchronously, and sets the drawer to CLOSED.
      */
     fun selectFilmAt(index: Int) {
-        TODO()
+        _state.update { it.copy(filmIndex = index, drawer = Drawer.CLOSED) }
+        cue(Cue.NOTCH)
+        val id = catalog.films[index].id
+        viewModelScope.launch { settingsStore.update { it.copy(filmId = id) } }
     }
 
     /** The film row's entry: [selectFilmAt] of the index [delta] away, wrapping modulo the film count. */
@@ -199,17 +202,17 @@ class ShooterViewModel(
 
     /** Rule 37: CLOSED -> OPEN; any other state is left alone. */
     fun openDrawer() {
-        TODO()
+        _state.update { if (it.drawer == Drawer.CLOSED) it.copy(drawer = Drawer.OPEN) else it }
     }
 
     /** Rule 37: OPEN -> CLOSED; REQUIRED is left alone. */
     fun closeDrawer() {
-        TODO()
+        _state.update { if (it.drawer == Drawer.OPEN) it.copy(drawer = Drawer.CLOSED) else it }
     }
 
     /** The drawer wheel passed one roll: plays TICK. */
     fun drawerStep() {
-        TODO()
+        cue(Cue.TICK)
     }
 
     /** Rules 28 and 29: clamps [ratio], ignores the current value, `setZoom`, then plays the cue for the crossing. */
