@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>片刻 · 拍照主界面</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 866px; box-sizing: border-box; padding: 44px 0 14px; display: flex; flex-direction: column; background-color: #C7C7C4; background-image: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0.07) 100%), repeating-linear-gradient(0deg, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.16) 1px, rgba(0,0,0,0.035) 1px, rgba(0,0,0,0.035) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px); color: #1E1E1D; font-family: 'Noto Sans SC', sans-serif;">
+
+<div style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; justify-content: space-between;">
+<a href="Menu.dc.html" style="height: 38px; box-sizing: border-box; padding: 0 16px; border-radius: 8px; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px), linear-gradient(180deg, #F6F6F4 0%, #CFCFCC 55%, #A9A9A5 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.18); color: #1E1E1D; text-shadow: 0 1px 0 rgba(255,255,255,0.7); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.2em; display: flex; align-items: center; text-decoration: none;">MENU</a>
+
+<div aria-label="第 12 张，共 36 张" style="width: 86px; height: 38px; position: relative; border-radius: 19px; overflow: hidden; background: #1A1A19; box-shadow: inset 0 2px 5px rgba(0,0,0,0.95), 0 1px 0 rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 600;">
+<span aria-hidden="true" style="font-size: 12px; color: #6F6F6C;">11</span>
+<span aria-hidden="true" style="font-size: 19px; color: #F4F4F1;">12</span>
+<span aria-hidden="true" style="font-size: 12px; color: #6F6F6C;">13</span>
+<span aria-hidden="true" style="position: absolute; top: 0; left: 50%; margin-left: -5px; width: 0; height: 0; border-left: 5px solid rgba(0,0,0,0); border-right: 5px solid rgba(0,0,0,0); border-top: 6px solid #E8833A;"></span>
+<span aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(90deg, rgba(12,12,12,0.9) 0%, rgba(12,12,12,0) 32%, rgba(12,12,12,0) 68%, rgba(12,12,12,0.9) 100%);"></span>
+</div>
+
+<button aria-label="闪光灯：自动" style="width: 40px; height: 40px; padding: 0; border: none; border-radius: 50%; background: radial-gradient(circle at 40% 30%, #FFFFFF 0%, #DCDCD9 40%, #A6A6A2 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.18); color: #1E1E1D; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"></path></svg>
+</button>
+</div>
+
+<div style="width: 360px; height: 480px; flex-shrink: 0; align-self: center; margin-top: 8px; position: relative; border-radius: 8px; overflow: hidden; background: #0B0B0A; box-shadow: 0 0 0 5px #1B1B1A, 0 0 0 6px rgba(0,0,0,0.4), 0 1px 0 6px rgba(255,255,255,0.75);">
+<svg width="360" height="480" viewBox="0 0 348 464" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block; filter: {{cur.filter}}; transform: scale({{zoom.scale}}); transform-origin: 50% 55%; transition: transform 0.2s ease-out;">
+<rect x="0" y="0" width="348" height="464" fill="#D4BD9B"></rect>
+<circle cx="238" cy="188" r="34" fill="#F2E2C1"></circle>
+<path d="M0 268 C 60 238, 110 250, 160 236 S 260 214, 348 244 L348 464 L0 464 Z" fill="#A48D76"></path>
+<path d="M0 312 C 70 286, 140 300, 200 288 S 300 270, 348 292 L348 464 L0 464 Z" fill="#7A6553"></path>
+<path d="M0 362 C 90 346, 200 354, 348 342 L348 464 L0 464 Z" fill="#54463A"></path>
+<path d="M50 356 L63 298 L76 356 Z" fill="#2E2620"></path>
+<path d="M74 358 L85 314 L96 358 Z" fill="#2E2620"></path>
+<path d="M286 350 L296 312 L306 350 Z" fill="#2E2620"></path>
+</svg>
+<div aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: {{cur.tint}};"></div>
+<span aria-hidden="true" style="position: absolute; right: 22px; bottom: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: #F28C3A; text-shadow: 0 0 6px rgba(242,140,58,0.65);">'24 11 05</span>
+<span aria-live="polite" style="position: absolute; left: 14px; bottom: 16px; padding: 4px 9px; border-radius: 10px; background: rgba(20,18,16,0.58); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #F3ECDD;">{{zoom.f}}mm · {{zoom.x}} · {{zoom.note}}</span>
+<div aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; box-shadow: inset 0 2px 14px rgba(0,0,0,0.55); background: linear-gradient(155deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 32%);"></div>
+</div>
+
+<div style="width: 372px; height: 64px; flex-shrink: 0; align-self: center; margin-top: 10px; position: relative;">
+
+<div style="position: absolute; left: 6px; top: 0; width: 360px; height: 41px; border-radius: 10px 10px 3px 3px; background: linear-gradient(180deg, #F4F4F2 0%, #DADAD7 50%, #BBBBB7 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.3);">
+<div style="position: absolute; left: 8px; right: 8px; top: 4px; height: 32px; overflow: hidden; border-radius: 7px; background: linear-gradient(180deg, #0B0B0A 0%, #262624 30%, #3A3A37 52%, #2A2A28 72%, #0E0E0D 100%); box-shadow: inset 0 4px 6px rgba(0,0,0,0.95), inset 0 -2px 3px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(0,0,0,0.8), 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.95);">
+<div style="position: absolute; left: 0; top: 0; height: 32px; display: flex; transform: translateX({{ring.offset}}px); transition: {{ring.tr}}; background-image: repeating-linear-gradient(90deg, rgba(215,215,208,0.55) 0px, rgba(215,215,208,0.55) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 12px); background-size: 100% 4px; background-repeat: no-repeat; background-position: 6px 5px;">
+<sc-for list="{{ring.stops}}" as="s" hint-placeholder-count="8">
+<button aria-label="变焦到 {{s.f}} 毫米" onClick="{{s.pick}}" style="width: 48px; height: 32px; padding: 0; border: none; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; cursor: pointer; font-family: 'IBM Plex Mono', monospace;">
+<span style="width: 1.5px; height: 7px; margin-top: 4px; background: rgba(230,230,224,0.85);"></span>
+<span style="font-size: {{s.size}}px; font-weight: 600; line-height: 1; color: {{s.color}}; text-shadow: 0 -1px 0 rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.08);">{{s.f}}</span>
+<span style="width: 3px; height: 3px; border-radius: 2px; background: {{s.dot}};"></span>
+</button>
+</sc-for>
+</div>
+<div aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; background: linear-gradient(90deg, rgba(10,10,9,0.96) 0%, rgba(10,10,9,0) 24%, rgba(10,10,9,0) 76%, rgba(10,10,9,0.96) 100%);"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 11px; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 100%);"></div>
+<span aria-hidden="true" style="position: absolute; top: 0; left: 50%; margin-left: -5px; width: 0; height: 0; border-left: 5px solid rgba(0,0,0,0); border-right: 5px solid rgba(0,0,0,0); border-top: 7px solid #E8833A;"></span>
+</div>
+</div>
+
+<div onPointerDown="{{ring.down}}" onPointerMove="{{ring.move}}" onPointerUp="{{ring.up}}" onPointerCancel="{{ring.up}}" onPointerLeave="{{ring.leave}}" style="position: absolute; left: 0; top: 41px; width: 372px; height: 23px; overflow: hidden; border-radius: 5px; touch-action: none; cursor: ew-resize; display: flex; background-image: linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.40) 100%), repeating-linear-gradient(90deg, #F4F4F2 0px, #F4F4F2 3px, #8A8A86 3px, #8A8A86 6px); background-position: 0 0, {{ring.knurl}}px 0; transition: {{ring.ktr}}; box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(0,0,0,0.3), 0 -1px 0 rgba(0,0,0,0.28), 0 2px 3px rgba(0,0,0,0.4), 0 6px 10px rgba(0,0,0,0.18);">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 3px; pointer-events: none; background: linear-gradient(180deg, #FBFBF9 0%, #C9C9C5 100%);"></span>
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; pointer-events: none; background: linear-gradient(180deg, #B9B9B5 0%, #8E8E8A 100%);"></span>
+<button aria-label="拉远一档" onClick="{{ring.wider}}" style="flex: 1; height: 23px; padding: 0; border: none; background: transparent; cursor: ew-resize;"></button>
+<button aria-label="拉近一档" onClick="{{ring.closer}}" style="flex: 1; height: 23px; padding: 0; border: none; background: transparent; cursor: ew-resize;"></button>
+</div>
+</div>
+
+<div style="width: 390px; height: 122px; flex-shrink: 0; margin-top: 6px; position: relative; overflow: hidden;">
+
+<div aria-live="polite" style="position: absolute; left: 15px; top: 11px; width: 178px; height: 100px; box-sizing: border-box; overflow: hidden; padding: 9px 12px 8px; border-radius: 8px; background: #A4AC9B; box-shadow: inset 0 2px 6px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.25), 0 0 0 4px #1B1B1A, 0 1px 0 4px rgba(255,255,255,0.75); display: flex; flex-direction: column; justify-content: space-between; font-family: 'Share Tech Mono', 'IBM Plex Mono', monospace; color: #1C2218;">
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11px;">
+<span>ISO {{cur.iso}}</span>
+<span>{{cur.code}} · AWB</span>
+</div>
+<div style="font-size: 16px; line-height: 1; white-space: nowrap; overflow: hidden; text-transform: uppercase;">{{cur.name}}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 14px;">
+<span>1/125</span>
+<span>F1.7</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11px;">
+<span>EV ±0.0</span>
+<span style="color: #34402F;">{{cur.nn}}/15</span>
+</div>
+<div aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 45%);"></div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 222px; top: 1px; width: 168px; height: 120px; background: linear-gradient(180deg, #8C8C88 0%, #B6B6B2 45%, #ECECEA 100%); -webkit-mask-image: radial-gradient(circle at 168px 60px, transparent 65.5px, #000 66px, #000 168px, transparent 168.5px); mask-image: radial-gradient(circle at 168px 60px, transparent 65.5px, #000 66px, #000 168px, transparent 168.5px);"></div>
+
+<div onPointerDown="{{reel.down}}" onPointerMove="{{reel.move}}" onPointerUp="{{reel.up}}" onPointerCancel="{{reel.up}}" onPointerLeave="{{reel.leave}}" style="position: absolute; left: 226px; top: 5px; width: 125px; height: 112px; overflow: hidden; touch-action: none; cursor: ns-resize; background: radial-gradient(circle at 164px 56px, #111110 70px, #262624 112px, #141413 164px); -webkit-mask-image: radial-gradient(circle at 164px 56px, transparent 69.5px, #000 70px, #000 164px, transparent 164.5px); mask-image: radial-gradient(circle at 164px 56px, transparent 69.5px, #000 70px, #000 164px, transparent 164.5px);">
+<sc-for list="{{reel.items}}" as="R" hint-placeholder-count="15">
+<button aria-label="换成 {{R.name}}" onClick="{{R.pick}}" style="position: absolute; left: 8px; top: 18.5px; width: 82px; height: 75px; padding: 0; border: none; border-radius: 2px; background: transparent; cursor: pointer; transform-origin: 156px 37.5px; transform: rotate({{R.rot}}deg); z-index: {{R.z}}; opacity: {{R.op}}; transition: {{reel.tr}};">
+<img src="{{R.img}}" alt="" style="display: block; width: 82px; height: 75px; border-radius: 2px; filter: brightness({{R.br}}); transition: {{reel.tr}}; box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 2px 6px rgba(0,0,0,0.7);">
+</button>
+</sc-for>
+<div aria-hidden="true" style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; pointer-events: none; background: radial-gradient(circle at 164px 56px, rgba(0,0,0,0.85) 70px, rgba(0,0,0,0) 79px, rgba(0,0,0,0) 155px, rgba(0,0,0,0.8) 164px), linear-gradient(180deg, rgba(0,0,0,0.8) 0px, rgba(0,0,0,0) 9px, rgba(0,0,0,0) 105px, rgba(0,0,0,0.55) 112px), linear-gradient(115deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0) 31%, rgba(255,255,255,0) 66%, rgba(255,255,255,0.05) 67%, rgba(255,255,255,0) 80%);"></div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 334px; top: 5px; width: 112px; height: 112px; border-radius: 50%; background: #A5A5A1; box-shadow: 0 2px 3px rgba(0,0,0,0.35), 0 6px 12px rgba(0,0,0,0.16);"></div>
+<div aria-hidden="true" style="position: absolute; left: 334px; top: 5px; width: 112px; height: 112px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, #EDEDEB 0deg 2deg, #8E8E8A 2deg 4deg); transform: rotate({{dial.rot}}deg); transition: {{dial.tr}};"></div>
+<div aria-hidden="true" style="position: absolute; left: 334px; top: 5px; width: 112px; height: 112px; border-radius: 50%; background: linear-gradient(160deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.25) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 0 0 1px rgba(0,0,0,0.2);"></div>
+<div aria-hidden="true" style="position: absolute; left: 341px; top: 12px; width: 98px; height: 98px; border-radius: 50%; background-image: repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, rgba(0,0,0,0.04) 1px, rgba(0,0,0,0.04) 2px), conic-gradient(from 0deg, #ECECEA 0deg, #BDBDB9 40deg, #F6F6F4 85deg, #C4C4C0 135deg, #E4E4E1 180deg, #B7B7B3 220deg, #F6F6F4 265deg, #C4C4C0 315deg, #ECECEA 360deg); box-shadow: 0 0 0 1px rgba(0,0,0,0.22), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 2px rgba(0,0,0,0.2);"></div>
+<div onPointerDown="{{dial.down}}" onPointerMove="{{dial.move}}" onPointerUp="{{dial.up}}" onPointerCancel="{{dial.up}}" onPointerLeave="{{dial.leave}}" style="position: absolute; left: 334px; top: 5px; width: 112px; height: 112px; border-radius: 50%; overflow: hidden; touch-action: none; display: flex; flex-direction: column;">
+<button aria-label="上一卷" onClick="{{dial.prev}}" style="flex: 1; padding: 0; border: none; background: transparent; cursor: ns-resize;"></button>
+<button aria-label="下一卷" onClick="{{dial.next}}" style="flex: 1; padding: 0; border: none; background: transparent; cursor: ns-resize;"></button>
+</div>
+</div>
+
+<div style="margin-top: auto; height: 72px; flex-shrink: 0; box-sizing: border-box; padding: 0 26px; display: flex; align-items: center; justify-content: space-between;">
+<button aria-label="相册" style="width: 56px; height: 56px; box-sizing: border-box; padding: 4px 4px 8px; border: none; border-radius: 2px; background: #FBF9F4; transform: rotate(-5deg); box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 5px 12px rgba(0,0,0,0.25); cursor: pointer;">
+<svg width="48" height="44" viewBox="0 0 348 464" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display: block;">
+<rect x="0" y="0" width="348" height="464" fill="#C9B08C"></rect>
+<circle cx="238" cy="188" r="34" fill="#EFDDB8"></circle>
+<path d="M0 268 C 60 238, 110 250, 160 236 S 260 214, 348 244 L348 464 L0 464 Z" fill="#9A826B"></path>
+<path d="M0 312 C 70 286, 140 300, 200 288 S 300 270, 348 292 L348 464 L0 464 Z" fill="#6E5A49"></path>
+<path d="M0 362 C 90 346, 200 354, 348 342 L348 464 L0 464 Z" fill="#4A3D32"></path>
+</svg>
+</button>
+
+<button aria-label="拍照" style="width: 72px; height: 72px; padding: 0; border: none; border-radius: 50%; background: repeating-conic-gradient(#ECECE9 0deg 3deg, #9A9A96 3deg 6deg); box-shadow: 0 2px 3px rgba(0,0,0,0.38), 0 6px 12px rgba(0,0,0,0.22); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<span style="width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 40% 32%, #FFFFFF 0%, #E6E6E3 35%, #BBBBB7 75%, #9D9D99 100%); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.45);"></span>
+</button>
+
+<button aria-label="切换前后摄像头" style="width: 52px; height: 52px; padding: 0; border: none; border-radius: 50%; background: radial-gradient(circle at 40% 30%, #FFFFFF 0%, #DCDCD9 40%, #A6A6A2 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.18); color: #1E1E1D; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3"></path><path d="M20 3v4h-4"></path><path d="M20 12a8 8 0 0 1-14 5.3"></path><path d="M4 21v-4h4"></path></svg>
+</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":866}}'>
+class Component extends DCLogic {
+  films() {
+    return [
+      { name: 'Portra 160', iso: '160', code: 'C-41', img: '/_blob/8d3d5835cddb77ed93bfc6c332cef5c2', tint: 'rgba(255,190,140,0.08)', filter: 'saturate(0.95)' },
+      { name: 'Portra 400', iso: '400', code: 'C-41', img: '/_blob/51f7f009c38b9e3385419026dc954ab9', tint: 'rgba(255,170,90,0.10)', filter: 'none' },
+      { name: 'Portra 800', iso: '800', code: 'C-41', img: '/_blob/1f8e48496ccd8fe195360f2c49f35400', tint: 'rgba(255,150,90,0.12)', filter: 'contrast(1.03)' },
+      { name: 'Gold 200', iso: '200', code: 'C-41', img: '/_blob/4302966fe4fa448fe5a57057ab4421d6', tint: 'rgba(255,190,60,0.16)', filter: 'saturate(1.15)' },
+      { name: 'UltraMax 400', iso: '400', code: 'C-41', img: '/_blob/4be8da3164565cedea768ebdf21e5b0d', tint: 'rgba(255,120,60,0.12)', filter: 'saturate(1.2)' },
+      { name: 'Ektar 100', iso: '100', code: 'C-41', img: '/_blob/e2f7abaffc294a722cf3ab5c68085d65', tint: 'rgba(255,80,60,0.08)', filter: 'saturate(1.35)' },
+      { name: 'Superia X-TRA 400', iso: '400', code: 'C-41', img: '/_blob/e40cd9a7f46e2ceafed802e61748a769', tint: 'rgba(60,160,150,0.14)', filter: 'saturate(0.95)' },
+      { name: 'C200', iso: '200', code: 'C-41', img: '/_blob/56ea4d88290a862e2b424f85edc0ed70', tint: 'rgba(80,170,120,0.12)', filter: 'none' },
+      { name: 'Pro 400H', iso: '400', code: 'C-41', img: '/_blob/a4f1528876c05c977477c674d78c2264', tint: 'rgba(150,210,200,0.12)', filter: 'saturate(0.85)' },
+      { name: 'Vision3 500T', iso: '500', code: 'ECN-2', img: '/_blob/e3b6db123cb2c869c9648e64989bab52', tint: 'rgba(40,90,160,0.30)', filter: 'contrast(1.05)' },
+      { name: 'Vision3 250D', iso: '250', code: 'ECN-2', img: '/_blob/af8920089d20e5ae85790e04c14055d2', tint: 'rgba(255,180,90,0.10)', filter: 'contrast(1.04)' },
+      { name: 'Kodachrome 64', iso: '64', code: 'K-14', img: '/_blob/795993d25d4dd2fc4d8bf2aa91e797a9', tint: 'rgba(200,40,40,0.08)', filter: 'saturate(1.35) contrast(1.08)' },
+      { name: 'Velvia 100', iso: '100', code: 'E-6', img: '/_blob/a2b99a38bd24017c6552d5284ebcd50c', tint: 'rgba(60,160,80,0.10)', filter: 'saturate(1.45) contrast(1.1)' },
+      { name: 'Provia 100F', iso: '100', code: 'E-6', img: '/_blob/26cd0028fe3df388a7ba7de324e0f652', tint: 'rgba(90,140,220,0.06)', filter: 'saturate(1.1)' },
+      { name: 'Ektachrome 100', iso: '100', code: 'E-6', img: '/_blob/7f402b9e0377870121ad2ec7ec558e8f', tint: 'rgba(80,140,220,0.12)', filter: 'saturate(1.15)' }
+    ].map((f, k) => Object.assign({ nn: String(k + 1).padStart(2, '0') }, f));
+  }
+  // Drag along one axis. A tap (under 6px of travel) never captures the pointer,
+  // so the buttons underneath still get their click; a real drag captures it.
+  drag(key, axis, from, onStep, onEnd) {
+    const pos = (e) => (axis === 'x' ? e.clientX : e.clientY);
+    return {
+      down: (e) => {
+        if (!e || e.clientX === undefined) return;
+        this[key] = { p: pos(e), v: from, cap: false, el: e.currentTarget, id: e.pointerId };
+      },
+      move: (e) => {
+        const d = this[key];
+        if (!d || !e) return;
+        if (e.pointerType === 'mouse' && e.buttons === 0) { this[key] = null; if (d.cap) onEnd(); return; }
+        const dp = pos(e) - d.p;
+        if (!d.cap && Math.abs(dp) > 6) {
+          d.cap = true;
+          try { d.el.setPointerCapture(d.id); } catch (err) { /* capture is optional */ }
+        }
+        if (d.cap) onStep(d.v, dp);
+      },
+      up: () => { const d = this[key]; this[key] = null; if (d && d.cap) onEnd(); },
+      leave: () => { const d = this[key]; if (d && !d.cap) this[key] = null; }
+    };
+  }
+  renderVals() {
+    const st = this.state || {};
+    const films = this.films();
+    const n = films.length;
+    const fan = 30;
+    const t = st.t !== undefined ? st.t : 1;
+    const i = ((t % n) + n) % n;
+    const fd = st.fd || null;
+    const v = fd ? fd.t0 - fd.dy / fd.px : t;
+    // Dragging up brings the next film in from below, like scrolling a list.
+    const scroll = (key, px) => this.drag(key, 'y', t,
+      (t0, dy) => this.setState({ fd: { t0: t0, dy: dy, px: px }, t: t0 - Math.round(dy / px) }),
+      () => this.setState({ fd: null }));
+    const wdrag = scroll('_wd', 58);
+    const ddrag = scroll('_dd', 26);
+    const pickFilm = (j) => () => {
+      let d = (((j - i) % n) + n) % n;
+      if (d > n / 2) d -= n;
+      if (d) this.setState({ t: t + d });
+    };
+    const ease = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    const clamp = (x) => Math.max(0, Math.min(1, x));
+    // The window is a fan of labels pivoting on the dial's axis: the current
+    // label sits upright on top, its neighbours tilt one step either way and
+    // show their corners. The dial turns by the same angle, as one part.
+    const reel = {
+      tr: fd ? 'none' : 'transform ' + ease + ', opacity ' + ease + ', filter ' + ease,
+      items: films.map((f, j) => {
+        const d = ((((j - v + n / 2) % n) + n) % n) - n / 2;
+        const a = Math.abs(d);
+        return {
+          img: f.img, name: f.name,
+          rot: -d * fan,
+          z: Math.max(1, 20 - Math.round(a * 4)),
+          op: clamp((2 - a) / 0.4),
+          br: 1 - 0.3 * Math.min(a, 1),
+          pick: pickFilm(j)
+        };
+      }),
+      down: wdrag.down, move: wdrag.move, up: wdrag.up, leave: wdrag.leave
+    };
+    const dial = {
+      rot: v * fan,
+      tr: fd ? 'none' : 'transform ' + ease,
+      next: () => this.setState({ t: t + 1 }),
+      prev: () => this.setState({ t: t - 1 }),
+      down: ddrag.down, move: ddrag.move, up: ddrag.up, leave: ddrag.leave
+    };
+
+    const stops = [
+      { f: 18, x: '0.8×', note: '超广角', crop: false },
+      { f: 23, x: '1×', note: '主摄', crop: false },
+      { f: 28, x: '1.2×', note: '裁切', crop: false },
+      { f: 35, x: '1.5×', note: '裁切', crop: false },
+      { f: 50, x: '2.2×', note: '数码', crop: true },
+      { f: 115, x: '5×', note: '长焦', crop: false },
+      { f: 135, x: '5.9×', note: '裁切', crop: false },
+      { f: 200, x: '8.7×', note: '数码', crop: true }
+    ];
+    const last = stops.length - 1;
+    const zpx = 48;
+    const zc = (v) => Math.max(0, Math.min(last, v));
+    const z = st.z !== undefined ? st.z : 1;
+    const zd = st.zd || null;
+    const zdrag = this.drag('_zd', 'x', z,
+      (z0, dx) => this.setState({ zd: { z0: z0, dx: dx }, z: zc(z0 - Math.round(dx / zpx)) }),
+      () => this.setState({ zd: null }));
+    const base = (k) => 172 - (k * zpx + 24);
+    let offset = base(z);
+    let knurl = -z * zpx;
+    if (zd) {
+      offset = Math.max(base(last), Math.min(base(0), base(zd.z0) + zd.dx));
+      knurl = -zd.z0 * zpx + (offset - base(zd.z0));
+    }
+    const zs = stops[z];
+    const zoom = { f: zs.f, x: zs.x, note: zs.note, scale: Math.min(3.2, Math.max(1, zs.f / 23)) };
+    const native = [18, 23, 115];
+    const ring = {
+      offset: offset,
+      knurl: knurl,
+      tr: zd ? 'none' : 'transform 0.2s ease-out',
+      ktr: zd ? 'none' : 'background-position 0.2s ease-out',
+      wider: () => this.setState({ z: zc(z - 1) }),
+      closer: () => this.setState({ z: zc(z + 1) }),
+      down: zdrag.down, move: zdrag.move, up: zdrag.up, leave: zdrag.leave,
+      stops: stops.map((s, k) => ({
+        f: s.f,
+        size: k === z ? 16 : 12,
+        color: k === z ? '#FFFFFF' : (s.crop ? '#E0955E' : '#C8C8C3'),
+        dot: native.indexOf(s.f) >= 0 ? '#E2742B' : 'rgba(0,0,0,0)',
+        pick: () => this.setState({ z: k })
+      }))
+    };
+
+    return {
+      cur: films[i],
+      dial: dial,
+      reel: reel,
+      zoom: zoom,
+      ring: ring
+    };
+  }
+}
+</script>
+</body>
+</html>

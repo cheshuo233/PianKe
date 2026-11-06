@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>片刻 · MENU</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 866px; box-sizing: border-box; padding: 44px 18px 24px; display: flex; flex-direction: column; background-color: #C7C7C4; background-image: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0.07) 100%), repeating-linear-gradient(0deg, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.16) 1px, rgba(0,0,0,0.035) 1px, rgba(0,0,0,0.035) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px); color: #1E1E1D; font-family: 'Noto Sans SC', sans-serif;">
+
+<div style="height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end;">
+<a href="Main.dc.html" aria-label="关闭菜单，返回取景" style="width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #FFFFFF 0%, #ECE9E3 70%, #D7D3CC 100%); box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(0,0,0,0.22), 0 4px 8px rgba(0,0,0,0.10); color: #4A453F; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>
+</a>
+</div>
+
+<div style="margin-top: 6px; flex-grow: 1; box-sizing: border-box; padding: 22px 22px 18px; border-radius: 10px; background-color: #FBF9F5; background-image: radial-gradient(rgba(80,60,30,0.035) 1px, rgba(0,0,0,0) 1.4px); background-size: 4px 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.14), 0 10px 28px rgba(0,0,0,0.12), inset 0 1px 0 #FFFFFF; color: #2E2A26; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; align-items: baseline; justify-content: space-between;">
+<span style="font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 700; letter-spacing: 0.1em;">设置</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.3em; color: #A8501A;">MENU</span>
+</div>
+
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.28em; color: #6E665A;">{{s.en}} · {{s.title}}</span>
+<sc-for list="{{s.rows}}" as="r" hint-placeholder-count="2">
+<button aria-label="{{r.label}}：{{r.say}}" style="height: 44px; box-sizing: border-box; padding: 0; border: none; background: transparent; color: #2E2A26; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+<span style="font-size: 15px; font-weight: 500;">{{r.label}}</span>
+<sc-if value="{{r.isToggle}}" hint-placeholder-val="{{true}}">
+<span style="width: 48px; height: 28px; position: relative; border-radius: 14px; background: {{r.track}}; box-shadow: inset 0 2px 4px rgba(0,0,0,0.25), 0 1px 0 #FFFFFF;">
+<span style="position: absolute; top: 2px; left: {{r.knobLeft}}px; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F1EEE8 60%, #D9D5CE 100%); box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 3px 5px rgba(0,0,0,0.12);"></span>
+</span>
+</sc-if>
+<sc-if value="{{r.isValue}}" hint-placeholder-val="{{false}}">
+<span style="height: 30px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; background: linear-gradient(180deg, #FFFFFF 0%, #EEEBE5 100%); box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px rgba(0,0,0,0.22); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #3A3631; display: flex; align-items: center; gap: 6px;">{{r.value}}
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+</span>
+</sc-if>
+</button>
+</sc-for>
+</div>
+</sc-for>
+
+<div style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+<span style="font-family: 'Noto Serif SC', serif; font-size: 14px; font-weight: 700; letter-spacing: 0.3em;">片刻</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: #6E665A;">PIANKE 135 · v0.1 · OPEN SOURCE</span>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":866}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toggle = (label, on) => ({ label: label, isToggle: true, isValue: false, say: on ? '开' : '关', track: on ? '#E2742B' : '#D9D5CE', knobLeft: on ? 22 : 2 });
+    const value = (label, v) => ({ label: label, isToggle: false, isValue: true, value: v, say: v });
+    return {
+      sections: [
+        { title: '拍摄', en: 'SHOOTING', rows: [value('画幅', '3:4'), toggle('日期水印', true), toggle('网格线', false)] },
+        { title: '冲洗', en: 'DEVELOP', rows: [value('颗粒', '标准'), toggle('光晕', true)] },
+        { title: '反馈', en: 'FEEDBACK', rows: [toggle('快门声', true), toggle('震动', true)] },
+        { title: '其他', en: 'OTHERS', rows: [value('保存位置', '相册'), value('关于片刻', 'v0.1')] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
