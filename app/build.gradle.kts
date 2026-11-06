@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "app.pianke"
-    compileSdk = 37
-    ndkVersion = "30.0.16248370"
+    compileSdk = libs.versions.compileSdk.get().toInt()
+    ndkVersion = libs.versions.ndk.get()
 
     defaultConfig {
         applicationId = "app.pianke"
-        minSdk = 31
-        targetSdk = 36
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -23,11 +23,16 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-            version = "4.1.2"
+            version = libs.versions.cmake.get()
         }
     }
 
     androidResources { noCompress += "bin" }
+
+    lint {
+        // A phone-only camera app: the CAMERA permission need not come with a ChromeOS uses-feature.
+        disable += "PermissionImpliesUnsupportedChromeOsHardware"
+    }
 
     // The golden inputs and expectations live in tests/engine/golden; the instrumented test reads them as assets.
     sourceSets.getByName("androidTest").assets.directories.add("../tests/engine/golden")

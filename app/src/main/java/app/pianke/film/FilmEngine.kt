@@ -10,7 +10,10 @@ internal object FilmEngine {
         System.loadLibrary("pianke")
     }
 
-    /** Opens assets/films.bin (packed uncompressed) with AAsset_getBuffer, zero copy; the handle lives until process end. */
+    /**
+     * Opens assets/films.bin (packed uncompressed) with AAsset_getBuffer, zero copy; the handle lives until process end.
+     * Throws [EngineException] for every failure, a missing asset or buffer included (FE_ERR_BAD_FILMS).
+     */
     external fun open(assets: AssetManager): Long
 
     external fun ids(handle: Long): Array<String>
@@ -20,7 +23,7 @@ internal object FilmEngine {
     /** Read-only direct ByteBuffer of film [index]'s LUT: lutSize^3 RGB888, red varying fastest, pointing straight into films.bin. */
     external fun lut(handle: Long, index: Int): ByteBuffer
 
-    /** Develops a writable ARGB_8888 bitmap in place (memory order RGBA, channels = 4). dateYmd = 0 prints no date. */
+    /** Develops a writable ARGB_8888 bitmap in place (memory order RGBA, channels = 4). dateYmd is year * 10000 + month * 100 + day; 0 prints no date. */
     external fun develop(
         handle: Long,
         index: Int,
