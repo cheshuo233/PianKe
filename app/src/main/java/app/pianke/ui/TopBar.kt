@@ -1,5 +1,8 @@
 package app.pianke.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import app.pianke.R
 import app.pianke.settings.FlashMode
 import app.pianke.settings.Roll
+import kotlin.math.roundToInt
 
 /** MENU key, the counter drum (`n/36`, rule 41), and the flash button (disabled while [flashEnabled] is false: front lens). */
 @Composable
@@ -102,7 +108,12 @@ private fun CounterDrum(realFrame: Int, rewinding: Boolean) {
 
 /** Rule 41: the drum's value while rewinding, animated from [Roll.FRAMES] down to 1 over [REWIND_MS], fast then slow; never reads the real frame. */
 @Composable
-private fun rewindingFrame(): Int = TODO()
+private fun rewindingFrame(): Int {
+    // Only composed while rewinding, so each rewind starts a fresh animation from the first frame.
+    val value = remember { Animatable(Roll.FRAMES.toFloat()) }
+    LaunchedEffect(Unit) { value.animateTo(1f, tween(REWIND_MS.toInt(), easing = FastOutSlowInEasing)) }
+    return value.value.roundToInt()
+}
 
 @Composable
 private fun Digit(value: Int?, size: androidx.compose.ui.unit.TextUnit, color: Color) {

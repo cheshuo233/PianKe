@@ -18,6 +18,7 @@ import app.pianke.feedback.Feedback
 import app.pianke.film.FilmCatalog
 import app.pianke.settings.FlashMode
 import app.pianke.settings.Lens
+import app.pianke.settings.Ritual
 import app.pianke.settings.Roll
 import app.pianke.settings.Settings
 import app.pianke.settings.SettingsStore
@@ -252,7 +253,7 @@ class ShooterViewModel(
      */
     fun onShutter(rotation: Int) {
         val camera = camera ?: return
-        if (capturing) return
+        if (capturing || _state.value.rewinding) return
         if (!queue.tryReserve()) {
             cue(Cue.REFUSE)
             return
@@ -273,11 +274,7 @@ class ShooterViewModel(
         viewModelScope.launch {
             var submitted = false
             try {
-                val captured = try {
-                    camera.capture(pendingStore.partFile(id), rotation)
-                } finally {
-                    capturing = false
-                }
+                val captured = camera.capture(pendingStore.partFile(id), rotation)
                 if (captured) {
                     withContext(NonCancellable) {
                         val committed = try {
@@ -299,13 +296,29 @@ class ShooterViewModel(
                             } catch (_: IOException) {
                                 false
                             }
-                            if (advanced) cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
+                            // `capturing` is still true here, so setting `rewinding` first leaves no gap for a press.
+                            val ritual = _state.value.settings.ritual
+                            val rewinds = advanced && rewound && ritual != Ritual.OFF
+                            if (advanced && ritual != Ritual.OFF) cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
+                            if (rewinds) _state.update { it.copy(rewinding = true) }
                             queue.submit(shot)
                             submitted = true
+                            if (rewinds) {
+                                viewModelScope.launch {
+                                    delay(REWIND_MS)
+                                    _state.update {
+                                        it.copy(
+                                            rewinding = false,
+                                            drawer = if (ritual == Ritual.HIGH) Drawer.REQUIRED else it.drawer,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             } finally {
+                capturing = false
                 if (!submitted) {
                     queue.release()
                     withContext(NonCancellable + Dispatchers.IO) {

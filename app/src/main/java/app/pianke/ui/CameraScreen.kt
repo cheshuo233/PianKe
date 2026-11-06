@@ -4,6 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.opengl.GLSurfaceView
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -176,6 +179,13 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
                 style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFFF3ECDD)),
             )
         }
+        // Rule 41: the dim while rewinding, fast in and slow out.
+        val dim by animateFloatAsState(
+            if (state.rewinding) 0.55f else 0f,
+            tween(if (state.rewinding) 150 else 300),
+            label = "rewindDim",
+        )
+        Box(Modifier.fillMaxSize().drawBehind { drawRect(Color.Black.copy(alpha = dim)) })
         Canvas(Modifier.fillMaxSize()) {
             val corner = 8.dp.toPx()
             val cornerMask = Path().apply {

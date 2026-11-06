@@ -1,6 +1,17 @@
 package app.pianke.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.stateDescription
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -186,7 +197,79 @@ private fun Group(en: Int, title: Int, rows: @Composable () -> Unit) {
 /** Spec 9.6: a three-stop slider labelled 关 / 中 / 高; dragging the knob or tapping a label changes the stop, release snaps to the nearest. */
 @Composable
 private fun RitualRow(ritual: Ritual, onUpdate: ((Settings) -> Settings) -> Unit) {
-    TODO()
+    val name = stringResource(R.string.menu_ritual)
+    val labels = listOf(R.string.menu_ritual_off, R.string.menu_ritual_medium, R.string.menu_ritual_high).map { stringResource(it) }
+    val knobSize = 24.dp
+    val travel = 126.dp // the knob's left edge runs this far across the 150 dp track, 0..2 detents
+    val travelPx = with(LocalDensity.current) { travel.toPx() }
+    val knob = remember { Animatable(ritual.ordinal.toFloat()) } // in detent units, 0..2
+    var drag by remember { mutableStateOf<Float?>(null) }
+    var last by remember { mutableIntStateOf(ritual.ordinal) } // the detent last reported, so one drag reports each change once
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(ritual) {
+        last = ritual.ordinal
+        if (drag == null) knob.animateTo(ritual.ordinal.toFloat())
+    }
+    fun choose(detent: Int) {
+        if (detent == last) return
+        last = detent
+        onUpdate { it.copy(ritual = Ritual.entries[detent]) }
+    }
+    val position = drag ?: knob.value
+    Row(
+        Modifier.fillMaxWidth().height(60.dp)
+            .clearAndSetSemantics { contentDescription = name; stateDescription = labels[ritual.ordinal] },
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicText(name, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, color = CardInk))
+        Column(Modifier.width(150.dp)) {
+            Box(
+                Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { drag = knob.value },
+                        onDragEnd = {
+                            val end = (drag ?: knob.value).roundToInt()
+                            scope.launch {
+                                knob.snapTo(drag ?: knob.value)
+                                drag = null
+                                knob.animateTo(end.toFloat())
+                            }
+                        },
+                        onDragCancel = {
+                            scope.launch {
+                                knob.snapTo(drag ?: knob.value)
+                                drag = null
+                                knob.animateTo(last.toFloat())
+                            }
+                        },
+                    ) { change, delta ->
+                        change.consume()
+                        val next = ((drag ?: knob.value) + delta / (travelPx / 2f)).coerceIn(0f, 2f)
+                        drag = next
+                        choose(next.roundToInt())
+                    }
+                },
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(4.dp).background(Color(0xFFD9D5CE), RoundedCornerShape(2.dp)))
+                Box(
+                    Modifier.offset(travel * (position / 2f), 0.dp).size(knobSize).shadow(2.dp, CircleShape)
+                        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF1EEE8), Color(0xFFD9D5CE))), CircleShape),
+                )
+            }
+            Box(Modifier.fillMaxWidth().height(18.dp)) {
+                labels.forEachIndexed { index, label ->
+                    Box(
+                        Modifier.offset(travel * (index / 2f), 0.dp).width(knobSize).height(18.dp)
+                            .clickable { choose(index); scope.launch { knob.animateTo(index.toFloat()) } },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        BasicText(label, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = if (index == ritual.ordinal) CardInk else CardMuted))
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

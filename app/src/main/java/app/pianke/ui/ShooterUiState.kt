@@ -8,6 +8,7 @@ import app.pianke.camera.ZoomScale
 import app.pianke.camera.ZoomStop
 import app.pianke.film.Film
 import app.pianke.settings.Lens
+import app.pianke.settings.Ritual
 import app.pianke.settings.Settings
 import kotlin.math.roundToInt
 
@@ -46,6 +47,6 @@ internal val ShooterUiState.focalMm: Int
 internal val ShooterUiState.stop: ZoomStop? get() = ratioStop ?: stops.firstOrNull { it.mm == focalMm }
 
 /** The counter drum shows unless the ritual is OFF. */
-internal val ShooterUiState.counterShown: Boolean get() = TODO()
+internal val ShooterUiState.counterShown: Boolean get() = settings.ritual != Ritual.OFF
 
 enum class Permission { UNKNOWN, GRANTED, DENIED, DENIED_FOREVER }
