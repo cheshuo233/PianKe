@@ -7,10 +7,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import android.util.Size
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.Camera2Interop
@@ -21,7 +18,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ZoomState
 import androidx.camera.core.Preview
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
@@ -62,10 +58,6 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     private var imageCapture: ImageCapture? = null
     private var rebound = false
     private var zoomRatio = 1f
-    private var open = false
-    private val handler = Handler(Looper.getMainLooper())
-    private var observedZoom: LiveData<ZoomState>? = null
-    private val zoomObserver = Observer<ZoomState> { onZoomState(it) }
     private var observed: LiveData<CameraState>? = null
     private val stateObserver = Observer<CameraState> { onCameraState(it) }
     private val saveExecutor = Executors.newSingleThreadExecutor()
@@ -86,34 +78,7 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     /** Remembered, because CameraX goes back to 1x whenever the use cases detach (stop/start, rebind); OPEN re-applies it. */
     fun setZoom(stop: ZoomStop) {
         zoomRatio = stop.ratio
-        applyZoom()
-    }
-
-    /**
-     * Sends the remembered ratio to the camera. While the camera is OPEN a failed request (CameraX may not have its
-     * control active yet) is retried a few times; a newer [zoomRatio] or another camera ends the retries.
-     */
-    private fun applyZoom(attempt: Int = 0) {
-        val bound = camera ?: return
-        val wanted = zoomRatio
-        val future = bound.cameraControl.setZoomRatio(wanted)
-        future.addListener({
-            try {
-                future.get()
-                Log.d(TAG, "setZoomRatio($wanted) ok, attempt $attempt")
-            } catch (e: Exception) {
-                Log.d(TAG, "setZoomRatio($wanted) failed, attempt $attempt: ${e.javaClass.simpleName}: ${e.message} / ${e.cause}")
-                if (open && attempt < ZOOM_RETRIES && camera === bound && wanted == zoomRatio) {
-                    handler.postDelayed({ if (open && camera === bound && wanted == zoomRatio) applyZoom(attempt + 1) }, ZOOM_RETRY_MS)
-                }
-            }
-        }, context.mainExecutor)
-    }
-
-    /** CameraX can put the zoom back to 1x after OPEN: whenever it reports a ratio other than the remembered one, ask again. */
-    private fun onZoomState(state: ZoomState) {
-        Log.d(TAG, "zoomState ratio=${state.zoomRatio} open=$open remembered=$zoomRatio")
-        if (open && kotlin.math.abs(state.zoomRatio - zoomRatio) > zoomRatio * 0.01f) applyZoom()
+        camera?.cameraControl?.setZoomRatio(stop.ratio)
     }
 
     /** The only FlashMode -> ImageCapture mapping; front is always FLASH_MODE_OFF; bind applies its flash through here. */
@@ -207,12 +172,6 @@ class CameraController(private val context: Context, private val owner: Lifecycl
             live.observe(owner, stateObserver)
             observed = live
         }
-        val zoomLive = bound.cameraInfo.zoomState
-        if (zoomLive !== observedZoom) {
-            observedZoom?.removeObserver(zoomObserver)
-            zoomLive.observe(owner, zoomObserver)
-            observedZoom = zoomLive
-        }
     }
 
     /** Rule 19: EDGE_MODE_OFF, NOISE_REDUCTION_MODE_MINIMAL, TONEMAP sRGB preset, each only if [chars] lists it. Applied to Preview and ImageCapture alike. */
@@ -254,12 +213,10 @@ class CameraController(private val context: Context, private val owner: Lifecycl
 
     /** Rule 18 (spec 7): the only place CameraX error codes become a [CameraIssue]; FATAL-class errors rebind once before Fatal; an open camera clears the issue. */
     private fun onCameraState(state: CameraState) {
-        Log.d(TAG, "cameraState type=${state.type} error=${state.error?.code}")
-        open = state.type == CameraState.Type.OPEN && state.error == null
         when (state.error?.code) {
             null -> if (state.type == CameraState.Type.OPEN) {
                 _issue.value = null
-                applyZoom()
+                camera?.cameraControl?.setZoomRatio(zoomRatio)
             }
             CameraState.ERROR_CAMERA_IN_USE, CameraState.ERROR_MAX_CAMERAS_IN_USE ->
                 _issue.value = CameraIssue.InUse
@@ -279,9 +236,6 @@ class CameraController(private val context: Context, private val owner: Lifecycl
     }
 
     private companion object {
-        const val TAG = "PiankeZoom"
-        const val ZOOM_RETRIES = 5
-        const val ZOOM_RETRY_MS = 100L
         const val EXPOSURE_INTERVAL_MS = 250L
         const val FULL_FRAME_DIAGONAL_MM = 43.27f
         val RATIO_43 = AspectRatioStrategy(AspectRatio.RATIO_4_3, AspectRatioStrategy.FALLBACK_RULE_NONE)
