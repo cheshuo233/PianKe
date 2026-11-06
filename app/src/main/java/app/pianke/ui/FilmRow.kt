@@ -331,18 +331,21 @@ private fun Modifier.stepDrag(
 }
 
 /**
- * Clips everything drawn after it (background, labels) to a circular band: the circle centre in dp (relative to the
- * element), its inner and outer radius. Drawn through `clipPath`, so nothing escapes onto the neighbouring parts.
+ * The one window shape: the circular band (circle centre in dp relative to the element, inner and outer radius)
+ * intersected with the element's own rectangle (the vertical cut). It is built once here and clips everything drawn
+ * after it, the background fill and the labels alike, so the fill and the clip cannot disagree. Drawn through
+ * `clipPath`, so nothing escapes onto the neighbouring parts.
  */
 private fun Modifier.ringClip(cx: Float, cy: Float, inner: Float, outer: Float): Modifier = drawWithCache {
     val d = density
     val centre = Offset(cx * d, cy * d)
-    val ring = Path.combine(
+    val band = Path.combine(
         PathOperation.Difference,
         Path().apply { addOval(Rect(centre, outer * d)) },
         Path().apply { addOval(Rect(centre, inner * d)) },
     )
-    onDrawWithContent { clipPath(ring) { this@onDrawWithContent.drawContent() } }
+    val shape = Path.combine(PathOperation.Intersect, band, Path().apply { addRect(Rect(Offset.Zero, size)) })
+    onDrawWithContent { clipPath(shape) { this@onDrawWithContent.drawContent() } }
 }
 
 /** The shortest signed distance in films, in -n/2..n/2, for an integer difference. */
