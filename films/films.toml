@@ -1,8 +1,9 @@
 # 胶片清单（唯一来源）。字段含义见 docs/superpowers/specs/2026-11-03-film-camera-design.md §4.1。
-# 改了这里要重新烘焙：python tools/bake_films.py --toml films/films.toml --out films/films.bin
+# 改了这里要重新烘焙：python tools/bake_films.py --toml films/films.toml --out app/src/main/assets/films.bin --json app/src/main/assets/films.json
 #
-# grain.strength 0..1；grain.size 是颗粒直径（成片像素）。
-# halation.radius 以 96x96 缩略图的像素为单位；halation.tint 是光晕颜色 [r, g, b]。
+# display 是界面上的名字（不带品牌前缀），iso 是整数，process 是 C-41 / ECN-2 / E-6 / K-14；name 照旧写进 films.bin。
+# grain.strength 0..1；grain.size 是颗粒直径，单位是 768 px 短边下的像素，引擎按成片短边缩放。
+# halation.radius 以高光图的格子为单位，高光图长边 96 格；halation.tint 是光晕颜色 [r, g, b]。
 # 颗粒和光晕的数值是初始值，按观感调整，定稿以本文件为准。
 
 # ---- negative：彩色负片 -> Kodak Portra Endura 相纸 ----
@@ -10,6 +11,9 @@
 [[film]]
 id = "portra160"
 name = "Kodak Portra 160"
+display = "Portra 160"
+iso = 160
+process = "C-41"
 kind = "negative"
 stock = "kodak_portra_160"
 print = "kodak_portra_endura"
@@ -19,6 +23,9 @@ halation = { strength = 0.10, radius = 5, tint = [255, 90, 40] }
 [[film]]
 id = "portra400"
 name = "Kodak Portra 400"
+display = "Portra 400"
+iso = 400
+process = "C-41"
 kind = "negative"
 stock = "kodak_portra_400"
 print = "kodak_portra_endura"
@@ -28,6 +35,9 @@ halation = { strength = 0.15, radius = 6, tint = [255, 90, 40] }
 [[film]]
 id = "portra800"
 name = "Kodak Portra 800"
+display = "Portra 800"
+iso = 800
+process = "C-41"
 kind = "negative"
 stock = "kodak_portra_800"
 print = "kodak_portra_endura"
@@ -37,6 +47,9 @@ halation = { strength = 0.18, radius = 6, tint = [255, 90, 40] }
 [[film]]
 id = "gold200"
 name = "Kodak Gold 200"
+display = "Gold 200"
+iso = 200
+process = "C-41"
 kind = "negative"
 stock = "kodak_gold_200"
 print = "kodak_portra_endura"
@@ -46,6 +59,9 @@ halation = { strength = 0.12, radius = 5, tint = [255, 100, 40] }
 [[film]]
 id = "ultramax400"
 name = "Kodak UltraMax 400"
+display = "UltraMax 400"
+iso = 400
+process = "C-41"
 kind = "negative"
 stock = "kodak_ultramax_400"
 print = "kodak_portra_endura"
@@ -55,6 +71,9 @@ halation = { strength = 0.14, radius = 6, tint = [255, 100, 40] }
 [[film]]
 id = "ektar100"
 name = "Kodak Ektar 100"
+display = "Ektar 100"
+iso = 100
+process = "C-41"
 kind = "negative"
 stock = "kodak_ektar_100"
 print = "kodak_portra_endura"
@@ -66,6 +85,9 @@ halation = { strength = 0.08, radius = 4, tint = [255, 90, 40] }
 [[film]]
 id = "superia400"             # "NC 风"
 name = "Fujifilm Superia X-TRA 400"
+display = "Superia X-TRA 400"
+iso = 400
+process = "C-41"
 kind = "negative"
 stock = "fujifilm_xtra_400"
 print = "fujifilm_crystal_archive_typeii"
@@ -75,6 +97,9 @@ halation = { strength = 0.14, radius = 6, tint = [255, 70, 50] }
 [[film]]
 id = "c200"
 name = "Fujifilm C200"
+display = "C200"
+iso = 200
+process = "C-41"
 kind = "negative"
 stock = "fujifilm_c200"
 print = "fujifilm_crystal_archive_typeii"
@@ -84,6 +109,9 @@ halation = { strength = 0.12, radius = 5, tint = [255, 70, 50] }
 [[film]]
 id = "pro400h"
 name = "Fujifilm Pro 400H"
+display = "Pro 400H"
+iso = 400
+process = "C-41"
 kind = "negative"
 stock = "fujifilm_pro_400h"
 print = "fujifilm_crystal_archive_typeii"
@@ -95,6 +123,9 @@ halation = { strength = 0.12, radius = 5, tint = [255, 80, 50] }
 [[film]]
 id = "vision3_500t"           # 光晕按 CineStill 的感觉调强：大半径、偏红
 name = "Kodak Vision3 500T"
+display = "Vision3 500T"
+iso = 500
+process = "ECN-2"
 kind = "cine"
 stock = "kodak_vision3_500t"
 print = "kodak_2383"
@@ -104,6 +135,9 @@ halation = { strength = 0.60, radius = 10, tint = [255, 50, 25] }
 [[film]]
 id = "vision3_250d"
 name = "Kodak Vision3 250D"
+display = "Vision3 250D"
+iso = 250
+process = "ECN-2"
 kind = "cine"
 stock = "kodak_vision3_250d"
 print = "kodak_2383"
@@ -115,6 +149,9 @@ halation = { strength = 0.15, radius = 6, tint = [255, 90, 40] }
 [[film]]
 id = "kodachrome64"           # "CC 风"
 name = "Kodak Kodachrome 64"
+display = "Kodachrome 64"
+iso = 64
+process = "K-14"
 kind = "slide"
 stock = "kodak_kodachrome_64"
 grain = { strength = 0.15, size = 0.9 }
@@ -123,6 +160,9 @@ halation = { strength = 0.08, radius = 4, tint = [255, 80, 40] }
 [[film]]
 id = "velvia100"
 name = "Fujifilm Velvia 100"
+display = "Velvia 100"
+iso = 100
+process = "E-6"
 kind = "slide"
 stock = "fujifilm_velvia_100"
 grain = { strength = 0.12, size = 0.9 }
@@ -131,6 +171,9 @@ halation = { strength = 0.06, radius = 4, tint = [255, 80, 40] }
 [[film]]
 id = "provia100f"
 name = "Fujifilm Provia 100F"
+display = "Provia 100F"
+iso = 100
+process = "E-6"
 kind = "slide"
 stock = "fujifilm_provia_100f"
 grain = { strength = 0.12, size = 0.9 }
@@ -139,6 +182,9 @@ halation = { strength = 0.06, radius = 4, tint = [255, 80, 40] }
 [[film]]
 id = "ektachrome100"
 name = "Kodak Ektachrome 100"
+display = "Ektachrome 100"
+iso = 100
+process = "E-6"
 kind = "slide"
 stock = "kodak_ektachrome_100"
 grain = { strength = 0.15, size = 1.0 }

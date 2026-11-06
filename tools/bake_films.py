@@ -1,6 +1,7 @@
-"""Bake films/films.toml into films/films.bin with spektrafilm (spec 4.1, 4.2, 12).
+"""Bake films/films.toml into films.bin and films.json with spektrafilm (spec 3.3, K1, K2).
 
-    python tools/bake_films.py --toml films/films.toml --out films/films.bin
+    python tools/bake_films.py --toml films/films.toml --out app/src/main/assets/films.bin \
+        --json app/src/main/assets/films.json
 
 PC only. spektrafilm is GPLv3, so it is imported lazily inside the functions that need it:
 this module (and therefore the bake tests that do not need spektrafilm) imports without it.
@@ -15,6 +16,8 @@ input exposure gain is applied.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import tomllib
 from dataclasses import dataclass
 from os import PathLike
@@ -25,6 +28,7 @@ import numpy as np
 import filmsbin
 
 _KINDS = ("negative", "cine", "slide")
+_PROCESSES = ("C-41", "ECN-2", "E-6", "K-14")
 
 
 @dataclass(frozen=True)
@@ -32,7 +36,10 @@ class FilmSpec:
     """One [[film]] table of films.toml, flattened. Units as in the toml (strength 0..1, size in pixels)."""
 
     id: str
-    name: str
+    name: str                                  # long name, written into films.bin
+    display: str                               # UI name, written into films.json
+    iso: int
+    process: str                               # one of _PROCESSES
     kind: str                                  # one of _KINDS
     stock: str                                 # spektrafilm film profile slug
     print: str | None                          # spektrafilm print profile slug; None exactly when kind == "slide"
@@ -45,13 +52,16 @@ class FilmSpec:
 
 def load_films_toml(path: str | PathLike[str]) -> list[FilmSpec]:
     """Parse films.toml, in file order. Raises ValueError for what only the toml can get wrong:
-    unknown kind, `print` present on a slide or missing on any other kind, duplicate ids."""
+    unknown kind or process, wrong-typed display/iso, `print` present on a slide or missing on any other kind, duplicate ids."""
     with open(path, "rb") as f:
         tables = tomllib.load(f)["film"]
     specs = [
         FilmSpec(
             id=t["id"],
             name=t["name"],
+            display=t["display"],
+            iso=t["iso"],
+            process=t["process"],
             kind=t["kind"],
             stock=t["stock"],
             print=t.get("print"),
@@ -64,6 +74,12 @@ def load_films_toml(path: str | PathLike[str]) -> list[FilmSpec]:
         for t in tables
     ]
     for spec in specs:
+        if not isinstance(spec.display, str) or not spec.display:
+            raise ValueError(f"{spec.id}: display must be a non-empty string")
+        if type(spec.iso) is not int or spec.iso <= 0:
+            raise ValueError(f"{spec.id}: iso must be a positive integer, got {spec.iso!r}")
+        if spec.process not in _PROCESSES:
+            raise ValueError(f"{spec.id}: process must be one of {_PROCESSES}, got {spec.process!r}")
         if spec.kind not in _KINDS:
             raise ValueError(f"{spec.id}: kind must be one of {_KINDS}, got {spec.kind!r}")
         if (spec.print is None) != (spec.kind == "slide"):
@@ -72,6 +88,15 @@ def load_films_toml(path: str | PathLike[str]) -> list[FilmSpec]:
     if len(set(ids)) != len(ids):
         raise ValueError(f"duplicate film ids in {path}")
     return specs
+
+
+def films_json(toml_path: str | PathLike[str], specs: list[FilmSpec]) -> str:
+    """The films.json text (K2): the toml's sha256 and each film's UI fields, in films.bin order."""
+    doc = {
+        "toml_sha256": hashlib.sha256(Path(toml_path).read_bytes()).hexdigest(),
+        "films": [{"id": s.id, "name": s.display, "iso": s.iso, "process": s.process} for s in specs],
+    }
+    return json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
 
 
 def entry_from_spec(spec: FilmSpec, lut: np.ndarray) -> filmsbin.FilmEntry:
@@ -146,18 +171,24 @@ def _to_uint8(x: np.ndarray) -> np.ndarray:
 
 
 def main() -> None:
-    """CLI: --toml PATH --out PATH. Bakes every film in toml order and writes films.bin."""
+    """CLI: --toml PATH --out PATH [--json PATH]. Bakes every film in toml order, writes films.bin and,
+    with --json, films.json."""
     parser = argparse.ArgumentParser(description="Bake films.toml into films.bin with spektrafilm.")
     parser.add_argument("--toml", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--json", type=Path)
     args = parser.parse_args()
 
+    specs = load_films_toml(args.toml)
     entries = []
-    for spec in load_films_toml(args.toml):
+    for spec in specs:
         print(f"baking {spec.id} ({spec.stock})", flush=True)
         entries.append(entry_from_spec(spec, bake_lut(spec)))
     filmsbin.write_films_bin(args.out, entries)
     print(f"wrote {args.out}: {len(entries)} films, {args.out.stat().st_size} bytes")
+    if args.json:
+        args.json.write_text(films_json(args.toml, specs), encoding="utf-8", newline="\n")
+        print(f"wrote {args.json}")
 
 
 if __name__ == "__main__":

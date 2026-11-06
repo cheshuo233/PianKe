@@ -1,0 +1,95 @@
+{
+  "toml_sha256": "48cdbdb04207dfbb99b50683707a6ccad6c8bb958a98a5a3982ff74970bc7c71",
+  "films": [
+    {
+      "id": "portra160",
+      "name": "Portra 160",
+      "iso": 160,
+      "process": "C-41"
+    },
+    {
+      "id": "portra400",
+      "name": "Portra 400",
+      "iso": 400,
+      "process": "C-41"
+    },
+    {
+      "id": "portra800",
+      "name": "Portra 800",
+      "iso": 800,
+      "process": "C-41"
+    },
+    {
+      "id": "gold200",
+      "name": "Gold 200",
+      "iso": 200,
+      "process": "C-41"
+    },
+    {
+      "id": "ultramax400",
+      "name": "UltraMax 400",
+      "iso": 400,
+      "process": "C-41"
+    },
+    {
+      "id": "ektar100",
+      "name": "Ektar 100",
+      "iso": 100,
+      "process": "C-41"
+    },
+    {
+      "id": "superia400",
+      "name": "Superia X-TRA 400",
+      "iso": 400,
+      "process": "C-41"
+    },
+    {
+      "id": "c200",
+      "name": "C200",
+      "iso": 200,
+      "process": "C-41"
+    },
+    {
+      "id": "pro400h",
+      "name": "Pro 400H",
+      "iso": 400,
+      "process": "C-41"
+    },
+    {
+      "id": "vision3_500t",
+      "name": "Vision3 500T",
+      "iso": 500,
+      "process": "ECN-2"
+    },
+    {
+      "id": "vision3_250d",
+      "name": "Vision3 250D",
+      "iso": 250,
+      "process": "ECN-2"
+    },
+    {
+      "id": "kodachrome64",
+      "name": "Kodachrome 64",
+      "iso": 64,
+      "process": "K-14"
+    },
+    {
+      "id": "velvia100",
+      "name": "Velvia 100",
+      "iso": 100,
+      "process": "E-6"
+    },
+    {
+      "id": "provia100f",
+      "name": "Provia 100F",
+      "iso": 100,
+      "process": "E-6"
+    },
+    {
+      "id": "ektachrome100",
+      "name": "Ektachrome 100",
+      "iso": 100,
+      "process": "E-6"
+    }
+  ]
+}
