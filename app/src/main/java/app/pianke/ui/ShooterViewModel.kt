@@ -243,7 +243,13 @@ class ShooterViewModel(
      * Rule 34 (via 33): [x], [y] are normalised within the viewfinder view; `renderer.viewToFrame` then
      * `camera.focusAt`. False when there is no camera or the frame size is unknown; plays TICK on success.
      */
-    suspend fun focusAt(x: Float, y: Float): Boolean = TODO()
+    suspend fun focusAt(x: Float, y: Float): Boolean {
+        val point = renderer?.viewToFrame(x, y) ?: return false
+        val controller = camera ?: return false
+        val ok = controller.focusAt(point.x, point.y)
+        if (ok) cue(Cue.TICK)
+        return ok
+    }
 
     /**
      * Spec section 8 shutter flow, the only place it is written. [rotation] is a Surface.ROTATION_* value

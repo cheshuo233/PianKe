@@ -214,7 +214,10 @@ class PreviewRenderer : GLSurfaceView.Renderer {
      * Rule 33: view-normalised ([x], [y]) -> the frame coordinates `CameraController.focusAt` takes, using the same
      * the same factors as the shader: null while [crop] is null, otherwise reads only [crop]. Main thread.
      */
-    fun viewToFrame(x: Float, y: Float): PointF? = TODO()
+    fun viewToFrame(x: Float, y: Float): PointF? {
+        val c = crop ?: return null
+        return PointF(0.5f + (x - 0.5f) * c.x, 0.5f + (y - 0.5f) * c.y)
+    }
 
     private fun setSampling(target: Int, filter: Int) {
         GLES30.glTexParameteri(target, GLES30.GL_TEXTURE_MIN_FILTER, filter)

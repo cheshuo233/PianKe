@@ -4,10 +4,12 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.opengl.GLSurfaceView
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -36,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -53,6 +60,9 @@ import app.pianke.camera.ZoomStop
 import app.pianke.settings.Framing
 import app.pianke.settings.Lens
 import app.pianke.settings.frame
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -79,7 +89,7 @@ fun CameraScreen(
                 state.settings.frame, state.settings.flash, !front, state.counterShown, state.rewinding,
                 onOpenMenu, viewModel::cycleFlash,
             )
-            Box(Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)) { Viewfinder(state, preview) }
+            Box(Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)) { Viewfinder(state, preview, viewModel::focusAt) }
             Box(Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally)) {
                 ZoomStrip(state.stops, state.zoomRatio, state.settings.zoomMode, state.focalMm, state.stop, viewModel::selectZoom)
             }
@@ -123,11 +133,16 @@ private fun openPhoto(context: android.content.Context, uri: Uri) {
 }
 
 @Composable
-private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
+private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView, onFocus: suspend (Float, Float) -> Boolean) {
     val front = state.settings.lens == Lens.FRONT
     val square = state.settings.framing == Framing.SQUARE
     // The 1:1 mask covers the top and bottom [mask]; the stamp and tag sit inside the square then (rule 35 filters taps by it too).
     val mask = if (square) 60.dp else 0.dp
+    val scope = rememberCoroutineScope()
+    var reticle by remember { mutableStateOf<Offset?>(null) }
+    var focused by remember { mutableStateOf<Boolean?>(null) }
+    var reticleAlpha by remember { mutableFloatStateOf(1f) }
+    var focusJob by remember { mutableStateOf<Job?>(null) }
     val today = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("''yy MM dd")) }
     // A SurfaceView ignores Modifier.clip, so the rounded corners and the bezel are drawn on top.
     Box(
@@ -137,6 +152,25 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
         }.background(Color(0xFF0B0B0A)),
     ) {
         AndroidView({ preview }, Modifier.fillMaxSize())
+        // Rule 35: taps in the 1:1 bands are ignored; a new tap cancels the previous focus job.
+        Box(
+            Modifier.fillMaxSize().pointerInput(mask) {
+                detectTapGestures { tap ->
+                    val band = mask.toPx()
+                    if (tap.y < band || tap.y > size.height - band) return@detectTapGestures
+                    focusJob?.cancel()
+                    reticle = tap
+                    focused = null
+                    reticleAlpha = 1f
+                    focusJob = scope.launch {
+                        focused = onFocus(tap.x / size.width, tap.y / size.height)
+                        delay(2_000)
+                        animate(1f, 0f, animationSpec = tween(300)) { value, _ -> reticleAlpha = value }
+                        reticle = null
+                    }
+                }
+            },
+        )
 
         if (square) {
             Box(Modifier.fillMaxWidth().height(mask).background(Color(0x8C000000)).align(Alignment.TopCenter))
@@ -197,6 +231,22 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
             drawRect(
                 Brush.linearGradient(0f to Color(0x24FFFFFF), 0.32f to Color.Transparent, 1f to Color.Transparent, end = Offset(size.width, size.height)),
             )
+        }
+        reticle?.let { centre ->
+            // §9.4: four corner brackets, 60dp square, 1.5dp stroke, 12dp arms; orange once focus succeeded.
+            Canvas(Modifier.fillMaxSize()) {
+                val color = (if (focused == true) Color(0xFFF28C3A) else Color(0xFFF3ECDD)).copy(alpha = reticleAlpha)
+                val half = 30.dp.toPx()
+                val arm = 12.dp.toPx()
+                val stroke = 1.5.dp.toPx()
+                for (sx in listOf(-1f, 1f)) {
+                    for (sy in listOf(-1f, 1f)) {
+                        val corner = Offset(centre.x + sx * half, centre.y + sy * half)
+                        drawLine(color, corner, Offset(corner.x - sx * arm, corner.y), stroke)
+                        drawLine(color, corner, Offset(corner.x, corner.y - sy * arm), stroke)
+                    }
+                }
+            }
         }
     }
 }

@@ -15,6 +15,8 @@ import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.DisplayOrientedMeteringPointFactory
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.CameraState
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -23,6 +25,7 @@ import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
@@ -32,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.math.hypot
@@ -85,7 +89,25 @@ class CameraController(private val context: Context, private val owner: Lifecycl
      * Rule 34: meters and focuses at ([x], [y]), normalised 0..1 over the upright, uncropped frame as the screen shows
      * it (front mirrored). Returns `isFocusSuccessful`; false with no camera, when superseded, or on error.
      */
-    suspend fun focusAt(x: Float, y: Float): Boolean = TODO()
+    suspend fun focusAt(x: Float, y: Float): Boolean {
+        val bound = camera ?: return false
+        val point = DisplayOrientedMeteringPointFactory(context.display, bound.cameraInfo, 1f, 1f).createPoint(x, y)
+        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+            .setAutoCancelDuration(5, TimeUnit.SECONDS)
+            .build()
+        val future = bound.cameraControl.startFocusAndMetering(action)
+        return suspendCancellableCoroutine { cont ->
+            // No cancelFocusAndMetering on cancellation: a newer tap has already replaced this action.
+            future.addListener({
+                val ok = try {
+                    future.get().isFocusSuccessful
+                } catch (_: Exception) {
+                    false
+                }
+                if (cont.isActive) cont.resume(ok)
+            }, ContextCompat.getMainExecutor(context))
+        }
+    }
 
     /** The only FlashMode -> ImageCapture mapping; front is always FLASH_MODE_OFF; bind applies its flash through here. */
     fun setFlash(mode: FlashMode) {
