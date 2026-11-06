@@ -1,7 +1,6 @@
 """Bake films/films.toml into films.bin and films.json with spektrafilm (spec 3.3, K1, K2).
 
-    python tools/bake_films.py --toml films/films.toml --out app/src/main/assets/films.bin \
-        --json app/src/main/assets/films.json
+    python tools/bake_films.py --toml films/films.toml --out app/src/main/assets/films.bin --json app/src/main/assets/films.json
 
 PC only. spektrafilm is GPLv3, so it is imported lazily inside the functions that need it:
 this module (and therefore the bake tests that do not need spektrafilm) imports without it.
@@ -171,12 +170,11 @@ def _to_uint8(x: np.ndarray) -> np.ndarray:
 
 
 def main() -> None:
-    """CLI: --toml PATH --out PATH [--json PATH]. Bakes every film in toml order, writes films.bin and,
-    with --json, films.json."""
+    """CLI: --toml PATH --out PATH --json PATH. Bakes every film in toml order, writes films.bin and films.json."""
     parser = argparse.ArgumentParser(description="Bake films.toml into films.bin with spektrafilm.")
     parser.add_argument("--toml", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--json", type=Path)
+    parser.add_argument("--json", required=True, type=Path)
     args = parser.parse_args()
 
     specs = load_films_toml(args.toml)
@@ -186,9 +184,8 @@ def main() -> None:
         entries.append(entry_from_spec(spec, bake_lut(spec)))
     filmsbin.write_films_bin(args.out, entries)
     print(f"wrote {args.out}: {len(entries)} films, {args.out.stat().st_size} bytes")
-    if args.json:
-        args.json.write_text(films_json(args.toml, specs), encoding="utf-8", newline="\n")
-        print(f"wrote {args.json}")
+    args.json.write_text(films_json(args.toml, specs), encoding="utf-8", newline="\n")
+    print(f"wrote {args.json}")
 
 
 if __name__ == "__main__":

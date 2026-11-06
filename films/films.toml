@@ -1,4 +1,4 @@
-# 胶片清单（唯一来源）。字段含义见 docs/superpowers/specs/2026-11-03-film-camera-design.md §4.1。
+# 胶片清单（唯一来源）。
 # 改了这里要重新烘焙：python tools/bake_films.py --toml films/films.toml --out app/src/main/assets/films.bin --json app/src/main/assets/films.json
 #
 # display 是界面上的名字（不带品牌前缀），iso 是整数，process 是 C-41 / ECN-2 / E-6 / K-14；name 照旧写进 films.bin。
