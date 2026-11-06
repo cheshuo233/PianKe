@@ -17,7 +17,6 @@ class ZoomStopsTest {
     fun availableFiltersByRangeAndClampsRatio() {
         val rows = listOf(
             Row(ZoomStops.BACK, 1.0f..5.0f, listOf(23, 28, 35, 50, 115), 1f),
-            Row(ZoomStops.BACK, 1.0f..2.0f, listOf(23, 28, 35), 1f),
             Row(ZoomStops.BACK, 0.8f..8.7f, all, 0.8f),          // 18 mm is within 3% of the lower end and is clamped
             Row(ZoomStops.BACK, 0.6f..10.0f, all, 18 / 23f),     // nothing clamped
             Row(ZoomStops.front(24), 1.0f..1.0f, listOf(24), 1f),

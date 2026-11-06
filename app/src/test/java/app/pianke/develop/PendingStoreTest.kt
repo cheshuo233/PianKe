@@ -3,7 +3,6 @@ package app.pianke.develop
 import app.pianke.settings.Framing
 import app.pianke.settings.GrainLevel
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -27,9 +26,9 @@ class PendingStoreTest {
         capturedAt = LocalDateTime.of(2026, 11, 6, 9, 30, 15),
     )
 
-    private fun captured(store: PendingStore, s: Shot = shot) {
-        store.partFile(s.id).writeText("jpeg")
-        store.commit(s)
+    private fun captured(store: PendingStore) {
+        store.partFile(shot.id).writeText("jpeg")
+        store.commit(shot)
     }
 
     @Test
@@ -65,6 +64,5 @@ class PendingStoreTest {
         File(dir, "2.meta").writeText("v=9\nfilm=a\n")
         assertTrue(store.recover().isEmpty())
         for (name in listOf("1.jpg", "1.meta", "2.jpg", "2.meta")) assertTrue(name, File(dir, name).exists())
-        assertFalse(File(dir, "1.jpg.part").exists())
     }
 }

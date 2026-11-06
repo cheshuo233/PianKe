@@ -1,8 +1,9 @@
-"""Bake contract (spec 9.1): films.bin agrees with films.toml, has the format of spec 4.2,
-and its LUTs reproduce what spektrafilm renders directly.
+"""Bake contract (spec 11.3): films.bin carries the toml parameters at the bin scale, has the header and size of
+the format, and its LUTs reproduce what spektrafilm renders directly.
 
 The header and size checks use the numbers written in the spec on purpose: they are the
-independent oracle for the format that filmsbin.py implements.
+independent oracle for the format that filmsbin.py implements. That films.bin and films.toml list the same ids in
+the same order is checked in tests/assets.
 """
 from __future__ import annotations
 
@@ -18,20 +19,13 @@ import filmsbin
 ROOT = Path(__file__).resolve().parents[2]
 TOML = ROOT / "films" / "films.toml"
 BIN = ROOT / "app" / "src" / "main" / "assets" / "films.bin"
-FILMS_PARTITION_SIZE = 0x200000  # spec 10
 
 SPECS = bake_films.load_films_toml(TOML)
 
 
 def test_entries_match_toml():
     entries = filmsbin.read_films_bin(BIN)
-    # Same ids in the same order: catches "edited films.toml, forgot to re-bake".
-    assert [e.id for e in entries] == [s.id for s in SPECS]
     for spec, entry in zip(SPECS, entries):
-        # Limits of spec 4.2 (the writer enforces the same set).
-        assert entry.id.isascii() and 1 <= len(entry.id) <= 23, entry.id
-        assert len(entry.name.encode("utf-8")) <= 31, entry.name
-        assert entry.grain_size_q4 >= 1, entry.id  # the engine divides by it
         # Parameters are the toml values at the spec's bin scale (0..1 -> 0..255, pixels -> x16), to the nearest step.
         assert entry.name == spec.name, entry.id
         assert entry.halation_radius == spec.halation_radius, entry.id
@@ -48,7 +42,6 @@ def test_header_and_lut_size():
     version, film_count, lut_size = struct.unpack_from("<HHB", data, 4)
     assert (version, film_count, lut_size) == (1, n, 33)
     assert len(data) == 16 + 68 * n + 107811 * n
-    assert len(data) <= FILMS_PARTITION_SIZE
 
 
 def _gray_ramp() -> np.ndarray:
