@@ -68,7 +68,13 @@ class Feedback(context: Context) {
         Cue.ADVANCE -> tremor(pulses = 6, onMs = 30L, offMs = 20L)      // about 0.3 s
         Cue.REWIND -> tremor(pulses = 9, onMs = 40L, offMs = 30L)       // about 0.63 s
         Cue.REFUSE -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK)
-        Cue.TICK -> TODO() // Rule 40: PRIMITIVE_LOW_TICK at 0.4, else PRIMITIVE_TICK at 0.25, else none
+        Cue.TICK -> when {
+            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK) ->
+                VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.4f).compose()
+            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK) ->
+                VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.25f).compose()
+            else -> null
+        }
     }
 
     private fun primitiveOr(primitive: Int, fallback: Int): VibrationEffect =
