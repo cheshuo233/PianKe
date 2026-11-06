@@ -2,4 +2,94 @@
 <resources>
     <string name="app_name">片刻</string>
     <string name="catalog_broken">胶片库损坏，请重新安装</string>
+
+    <!-- Top bar -->
+    <string name="menu_button">MENU</string>
+    <string name="counter_desc">第 %1$d 张，共 %2$d 张</string>
+    <string name="flash_desc">闪光灯：%1$s</string>
+    <string name="flash_auto">自动</string>
+    <string name="flash_on">开</string>
+    <string name="flash_off">关</string>
+    <string name="flash_unavailable">不可用</string>
+
+    <!-- Viewfinder -->
+    <string name="zoom_tag">%1$dmm · %2$s · %3$s</string>
+    <string name="zoom_ratio">%1$s×</string>
+    <string name="zoom_note_ultrawide">超广角</string>
+    <string name="zoom_note_main">主摄</string>
+    <string name="zoom_note_tele">长焦</string>
+    <string name="zoom_note_crop">裁切</string>
+    <string name="zoom_note_digital">数码</string>
+    <string name="zoom_note_front">前置</string>
+    <string name="issue_in_use">相机被占用</string>
+    <string name="issue_fatal">相机出错，请重开</string>
+
+    <!-- Zoom ring -->
+    <string name="zoom_to_desc">变焦到 %1$d 毫米</string>
+    <string name="zoom_wider_desc">拉远一档</string>
+    <string name="zoom_closer_desc">拉近一档</string>
+
+    <!-- Film row and LCD -->
+    <string name="lcd_iso">ISO %1$d</string>
+    <string name="lcd_process">%1$s · AWB</string>
+    <string name="lcd_developing">DEV %1$s</string>
+    <string name="lcd_film_count">%1$02d/%2$d</string>
+    <string name="lcd_shutter">1/%1$d</string>
+    <string name="lcd_aperture">F%1$.1f</string>
+    <string name="lcd_no_shot">未拍到</string>
+    <string name="lcd_develop_failed">冲洗失败，已暂存</string>
+    <string name="lcd_storage_full">存储已满</string>
+    <string name="film_pick_desc">换成 %1$s</string>
+    <string name="film_prev_desc">上一卷</string>
+    <string name="film_next_desc">下一卷</string>
+
+    <!-- Bottom bar -->
+    <string name="gallery_desc">相册</string>
+    <string name="shutter_desc">拍照</string>
+    <string name="flip_desc">切换前后摄像头</string>
+
+    <!-- Permission gate -->
+    <string name="permission_needed">需要相机权限</string>
+    <string name="permission_grant">授予权限</string>
+    <string name="permission_open_settings">打开设置</string>
+
+    <!-- Menu -->
+    <string name="menu_title">设置</string>
+    <string name="menu_tag">MENU</string>
+    <string name="menu_close_desc">关闭菜单，返回取景</string>
+    <string name="menu_group_shoot">拍摄</string>
+    <string name="menu_group_shoot_en">SHOOT</string>
+    <string name="menu_group_develop">冲洗</string>
+    <string name="menu_group_develop_en">DEVELOP</string>
+    <string name="menu_group_feedback">反馈</string>
+    <string name="menu_group_feedback_en">FEEDBACK</string>
+    <string name="menu_group_others">其他</string>
+    <string name="menu_group_others_en">OTHERS</string>
+    <string name="menu_framing">画幅</string>
+    <string name="menu_framing_43">3:4</string>
+    <string name="menu_framing_square">1:1</string>
+    <string name="menu_date_stamp">日期水印</string>
+    <string name="menu_grid">网格线</string>
+    <string name="menu_grain">颗粒</string>
+    <string name="menu_grain_off">关</string>
+    <string name="menu_grain_low">弱</string>
+    <string name="menu_grain_normal">标准</string>
+    <string name="menu_grain_high">强</string>
+    <string name="menu_halation">光晕</string>
+    <string name="menu_shutter_sound">快门声</string>
+    <string name="menu_vibration">震动</string>
+    <string name="menu_about">关于片刻</string>
+    <string name="menu_footer_name">片刻</string>
+    <string name="menu_footer_line">PIANKE 135 · v%1$s · OPEN SOURCE</string>
+    <string name="toggle_on">开</string>
+    <string name="toggle_off">关</string>
+
+    <!-- About -->
+    <string name="about_back_desc">返回</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_license">GPL-3.0</string>
+    <string name="about_source">源码地址：%1$s</string>
+    <string name="about_source_url">（仓库建好后填写）</string>
+    <string name="about_credit">胶片模拟基于 spektrafilm 的光谱胶片模型，感谢其作者。</string>
+    <string name="about_trademark">胶片名称仅用于说明所模拟的胶片，商标归各自所有者。</string>
 </resources>
