@@ -130,7 +130,10 @@ private fun Groups(settings: Settings, shutterSoundForced: Boolean, version: Str
         ToggleRow(R.string.menu_date_stamp, settings.dateStamp) { on -> onUpdate { it.copy(dateStamp = on) } }
         ToggleRow(R.string.menu_grid, settings.grid) { on -> onUpdate { it.copy(grid = on) } }
         RitualRow(settings.ritual, onUpdate)
-        ZoomModeRow(settings.zoomMode, onUpdate)
+        ValueRow(
+            R.string.menu_zoom_mode,
+            stringResource(if (settings.zoomMode == ZoomMode.FREE) R.string.menu_zoom_mode_free else R.string.menu_zoom_mode_stops),
+        ) { onUpdate { it.copy(zoomMode = if (it.zoomMode == ZoomMode.FREE) ZoomMode.STOPS else ZoomMode.FREE) } }
     }
     Group(R.string.menu_group_develop_en, R.string.menu_group_develop) {
         ValueRow(
@@ -183,12 +186,6 @@ private fun Group(en: Int, title: Int, rows: @Composable () -> Unit) {
 /** Spec 9.6: a three-stop slider labelled 关 / 中 / 高; dragging the knob or tapping a label changes the stop, release snaps to the nearest. */
 @Composable
 private fun RitualRow(ritual: Ritual, onUpdate: ((Settings) -> Settings) -> Unit) {
-    TODO()
-}
-
-/** Spec 9.6: a [ValueRow] showing 档位 / 任意; a tap toggles. */
-@Composable
-private fun ZoomModeRow(mode: ZoomMode, onUpdate: ((Settings) -> Settings) -> Unit) {
     TODO()
 }
 

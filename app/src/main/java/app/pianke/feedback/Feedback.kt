@@ -54,7 +54,7 @@ class Feedback(context: Context) {
         } else if (sound && audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
             sounds[cue]?.let { pool.play(it, volume, volume, 1, 0, 1f) }
         }
-        if (vibration) vibrator.vibrate(effect(cue))
+        if (vibration) effect(cue)?.let { vibrator.vibrate(it) }
     }
 
     // MediaActionSound.mustPlayShutterSound() is public only from API 33. On API 31-32 there is no public
@@ -62,7 +62,7 @@ class Feedback(context: Context) {
     private fun mustPlayShutterSound(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && MediaActionSound.mustPlayShutterSound()
 
-    private fun effect(cue: Cue): VibrationEffect = when (cue) {
+    private fun effect(cue: Cue): VibrationEffect? = when (cue) {
         Cue.NOTCH -> primitiveOr(VibrationEffect.Composition.PRIMITIVE_TICK, VibrationEffect.EFFECT_TICK)
         Cue.SHUTTER -> primitiveOr(VibrationEffect.Composition.PRIMITIVE_CLICK, VibrationEffect.EFFECT_CLICK)
         Cue.ADVANCE -> tremor(pulses = 6, onMs = 30L, offMs = 20L)      // about 0.3 s

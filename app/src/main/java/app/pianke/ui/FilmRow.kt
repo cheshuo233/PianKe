@@ -111,6 +111,20 @@ private val STEP_DEG: Float = run {
 private val WINDOW_STEP_DP: Float = (WHEEL_RADIUS * STEP_DEG * PI / 180).toFloat()
 private val DIAL_STEP_DP: Float = (DIAL_RADIUS * STEP_DEG * PI / 180).toFloat()
 
+/** Decodes every film's label off the main thread, once per [films]; empty until loaded. Shared by the film row and the drawer. */
+@Composable
+internal fun rememberLabels(films: List<Film>): Map<String, ImageBitmap> {
+    val context = LocalContext.current
+    val labels by produceState(emptyMap<String, ImageBitmap>(), films) {
+        value = withContext(Dispatchers.IO) {
+            films.associate { film ->
+                film.id to context.assets.open(film.labelAsset).use { BitmapFactory.decodeStream(it).asImageBitmap() }
+            }
+        }
+    }
+    return labels
+}
+
 /**
  * The film row: LCD slot, the arc label window, the half dial. The row is laid out against the physical screen edge:
  * it is [LocalEdgeMargin] wider than the centred board and overhangs it on the right.
@@ -130,14 +144,7 @@ fun FilmRow(
     onOpen: () -> Unit,
 ) {
     val n = films.size
-    val context = LocalContext.current
-    val labels by produceState(emptyMap<String, ImageBitmap>(), films) {
-        value = withContext(Dispatchers.IO) {
-            films.associate { film ->
-                film.id to context.assets.open(film.labelAsset).use { BitmapFactory.decodeStream(it).asImageBitmap() }
-            }
-        }
-    }
+    val labels = rememberLabels(films)
 
     // ONE continuous, unwrapped wheel position, in steps. Labels and dial both derive from it; the film index is
     // always position mod n. Drag, tap and snap all move this same value, so nothing ever turns a whole cycle.

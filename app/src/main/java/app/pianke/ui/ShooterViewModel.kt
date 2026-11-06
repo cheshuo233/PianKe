@@ -51,8 +51,9 @@ import java.time.LocalDateTime
  * - From then on this class owns `state.filmIndex`: [selectFilmAt] sets it synchronously.
  * - [drive] owns only the Activity-scoped work, as side effects of state on the camera and the renderer.
  *
- * [CameraController] and [PreviewRenderer] belong to the Activity (H2). The renderer is only touched inside
- * [drive]; the controller is also held in [camera] while [drive] runs, so [onShutter] and [selectZoom] can reach it; the renderer is held in [renderer] the same way for [focusAt].
+ * [CameraController] and [PreviewRenderer] belong to the Activity (H2). The renderer is touched only inside
+ * [drive] and, through [renderer], by [focusAt]; the controller is likewise held in [camera] while [drive] runs, so
+ * [onShutter] and [selectZoom] can reach it.
  */
 class ShooterViewModel(
     private val catalog: FilmCatalog,
@@ -125,6 +126,7 @@ class ShooterViewModel(
      * - grain -> `setGrain`, flash -> `setFlash`;
      * - distinct (permission granted, lens) -> `bind`; never rebinds for other settings changes;
      * - `camera.stops` -> rule 32, the reset of the zoom ratio to 1 (the only place);
+     * - `settings.zoomMode` -> rule 31: on FREE -> STOPS, snap to `ZoomScale.nearest`, no cue (the only place);
      * - `camera.issue` and `camera.exposure` -> state.
      */
     suspend fun drive(camera: CameraController, renderer: PreviewRenderer): Nothing {
@@ -213,7 +215,8 @@ class ShooterViewModel(
 
     /**
      * Spec section 8 shutter flow, the only place it is written. [rotation] is a Surface.ROTATION_* value
-     * from the Activity's orientation listener. Ignored while a capture is outstanding. Every path after
+     * from the Activity's orientation listener. Ignored while a capture is outstanding or the roll is rewinding
+     * (rule 36, which also owns the ritual cues and the rewind timer, started after `submit`). Every path after
      * `tryReserve` ends in `submit` or `release`, even if this scope is cancelled mid-shot.
      */
     fun onShutter(rotation: Int) {

@@ -27,7 +27,6 @@
     <string name="zoom_tag_free">%1$dmm · %2$s</string>
 
     <!-- Zoom strip -->
-    <string name="zoom_to_desc">变焦到 %1$d 毫米</string>
 
     <!-- Film row and LCD -->
     <string name="lcd_iso">ISO %1$d</string>

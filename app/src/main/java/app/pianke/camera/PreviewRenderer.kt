@@ -50,12 +50,9 @@ class PreviewRenderer : GLSurfaceView.Renderer {
     private val texMatrix = FloatArray(16)
     private val viewToCamera = FloatArray(4)
 
-    /** Rule 33: the center-crop factors, written by [updateViewToCamera] on the GL thread, read by [viewToFrame] on main. */
+    /** Rule 33: the center-crop factors (sx, sy), published by [updateViewToCamera] on the GL thread; null until known. Read by [viewToFrame] on main. */
     @Volatile
-    private var cropX = 1f
-
-    @Volatile
-    private var cropY = 1f
+    private var crop: PointF? = null
     private val quad = ByteBuffer.allocateDirect(QUAD.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().put(QUAD)
 
     /** Supplies the OES SurfaceTexture's Surface to CameraX at the requested resolution. */
@@ -209,13 +206,13 @@ class PreviewRenderer : GLSurfaceView.Renderer {
         // Column-major mat2: diag(+-sx, sy).
         viewToCamera[0] = if (mirrored) -sx else sx
         viewToCamera[3] = sy
-        cropX = sx
-        cropY = sy
+        val published = crop
+        if (published == null || published.x != sx || published.y != sy) crop = PointF(sx, sy)
     }
 
     /**
      * Rule 33: view-normalised ([x], [y]) -> the frame coordinates `CameraController.focusAt` takes, using the same
-     * [cropX] and [cropY] as the shader; null until the frame size is known. Main thread.
+     * the same factors as the shader: null while [crop] is null, otherwise reads only [crop]. Main thread.
      */
     fun viewToFrame(x: Float, y: Float): PointF? = TODO()
 

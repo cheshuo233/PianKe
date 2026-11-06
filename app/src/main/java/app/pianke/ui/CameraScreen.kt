@@ -103,12 +103,10 @@ fun CameraScreen(
             )
             Spacer(Modifier.height(14.dp))
         }
-        if (state.drawer != Drawer.CLOSED) {
-            FilmDrawer(
-                films = state.films, filmIndex = state.filmIndex, required = state.drawer == Drawer.REQUIRED,
-                onStep = viewModel::drawerStep, onPick = viewModel::selectFilmAt, onClose = viewModel::closeDrawer,
-            )
-        }
+        FilmDrawer(
+            films = state.films, filmIndex = state.filmIndex, drawer = state.drawer,
+            onStep = viewModel::drawerStep, onPick = viewModel::selectFilmAt, onClose = viewModel::closeDrawer,
+        )
     }
 }
 
@@ -125,6 +123,8 @@ private fun openPhoto(context: android.content.Context, uri: Uri) {
 private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
     val front = state.settings.lens == Lens.FRONT
     val square = state.settings.framing == Framing.SQUARE
+    // The 1:1 mask covers the top and bottom [mask]; the stamp and tag sit inside the square then (rule 35 filters taps by it too).
+    val mask = if (square) 60.dp else 0.dp
     val today = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("''yy MM dd")) }
     // A SurfaceView ignores Modifier.clip, so the rounded corners and the bezel are drawn on top.
     Box(
@@ -136,8 +136,8 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
         AndroidView({ preview }, Modifier.fillMaxSize())
 
         if (square) {
-            Box(Modifier.fillMaxWidth().height(60.dp).background(Color(0x8C000000)).align(Alignment.TopCenter))
-            Box(Modifier.fillMaxWidth().height(60.dp).background(Color(0x8C000000)).align(Alignment.BottomCenter))
+            Box(Modifier.fillMaxWidth().height(mask).background(Color(0x8C000000)).align(Alignment.TopCenter))
+            Box(Modifier.fillMaxWidth().height(mask).background(Color(0x8C000000)).align(Alignment.BottomCenter))
         }
         if (state.settings.grid) {
             Canvas(Modifier.fillMaxSize()) {
@@ -148,12 +148,10 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
                 }
             }
         }
-        // The 1:1 mask covers the top and bottom 60 dp, so the stamp and tag sit inside the square then.
-        val inset = if (square) 60.dp else 0.dp
         if (state.settings.dateStamp) {
             BasicText(
                 today,
-                Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 20.dp + inset),
+                Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 20.dp + mask),
                 style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.1.sp, color = Color(0xFFF28C3A)),
             )
         }
@@ -161,7 +159,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
             val ratio = String.format(Locale.ROOT, "%.1f", stop.ratio).removeSuffix(".0")
             BasicText(
                 stringResource(R.string.zoom_tag, stop.mm, stringResource(R.string.zoom_ratio, ratio), stringResource(zoomNoteRes(stop, front))),
-                Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 16.dp + inset)
+                Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 16.dp + mask)
                     .semantics { liveRegion = LiveRegionMode.Polite }
                     .background(Color(0x94141210), RoundedCornerShape(10.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
                 style = TextStyle(fontFamily = PiankeType.Plex, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF3ECDD)),
@@ -176,12 +174,12 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView) {
         }
         Canvas(Modifier.fillMaxSize()) {
             val corner = 8.dp.toPx()
-            val mask = Path().apply {
+            val cornerMask = Path().apply {
                 fillType = PathFillType.EvenOdd
                 addRect(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height))
                 addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(corner)))
             }
-            drawPath(mask, Bezel)
+            drawPath(cornerMask, Bezel)
             drawRect(
                 Brush.linearGradient(0f to Color(0x24FFFFFF), 0.32f to Color.Transparent, 1f to Color.Transparent, end = Offset(size.width, size.height)),
             )

@@ -75,7 +75,7 @@ fun TopBar(
 
 @Composable
 private fun CounterDrum(realFrame: Int, rewinding: Boolean) {
-    val frame = if (rewinding) rewindingFrame(realFrame) else realFrame
+    val frame = if (rewinding) rewindingFrame() else realFrame
     val description = stringResource(R.string.counter_desc, frame, Roll.FRAMES)
     Box(
         Modifier.size(86.dp, 38.dp).clip(RoundedCornerShape(19.dp)).background(Color(0xFF1A1A19))
@@ -100,9 +100,9 @@ private fun CounterDrum(realFrame: Int, rewinding: Boolean) {
     }
 }
 
-/** Rule 41: the drum's value while rewinding, animated from [from] down to 1 over [REWIND_MS], fast then slow. */
+/** Rule 41: the drum's value while rewinding, animated from [Roll.FRAMES] down to 1 over [REWIND_MS], fast then slow; never reads the real frame. */
 @Composable
-private fun rewindingFrame(from: Int): Int = TODO()
+private fun rewindingFrame(): Int = TODO()
 
 @Composable
 private fun Digit(value: Int?, size: androidx.compose.ui.unit.TextUnit, color: Color) {
