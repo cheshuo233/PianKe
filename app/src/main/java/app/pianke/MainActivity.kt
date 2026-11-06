@@ -10,6 +10,12 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -21,11 +27,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.pianke.camera.CameraController
@@ -35,13 +42,14 @@ import app.pianke.ui.CameraScreen
 import app.pianke.ui.Ink
 import app.pianke.ui.MenuScreen
 import app.pianke.ui.PermissionGate
+import app.pianke.ui.REFERENCE_HEIGHT_DP
 import app.pianke.ui.REFERENCE_WIDTH_DP
 import app.pianke.ui.ShooterViewModel
 import app.pianke.ui.bodyBackground
 
 /**
  * Owns the Activity-scoped [CameraController], [PreviewRenderer] and GLSurfaceView (H2, H6) and the orientation
- * listener, scales the whole UI to the 390 dp reference, and routes between the broken-catalog notice, the
+ * listener, scales the whole UI to fit the 390 x 866 dp reference, and routes between the broken-catalog notice, the
  * permission gate and the shooting screen with the MENU as an overlay (the GL view is never destroyed).
  */
 class MainActivity : ComponentActivity() {
@@ -67,13 +75,25 @@ class MainActivity : ComponentActivity() {
         renderer.attach(preview)
         val app = application as PiankeApp
         setContent {
-            val density = LocalDensity.current
-            val widthDp = LocalConfiguration.current.screenWidthDp
-            CompositionLocalProvider(
-                LocalDensity provides Density(density.density * widthDp / REFERENCE_WIDTH_DP, density.fontScale),
-            ) {
-                val catalog = app.catalog
-                if (catalog == null) BrokenCatalogNotice() else Shooter(app, catalog)
+            // The one place that defines the scale: the 390 x 866 dp board fits the area left by the system bars.
+            BoxWithConstraints(Modifier.bodyBackground()) {
+                val density = LocalDensity.current
+                val bars = WindowInsets.systemBars
+                val availableWidth = constraints.maxWidth - bars.getLeft(density, LayoutDirection.Ltr) - bars.getRight(density, LayoutDirection.Ltr)
+                val availableHeight = constraints.maxHeight - bars.getTop(density) - bars.getBottom(density)
+                val scale = minOf(
+                    availableWidth / REFERENCE_WIDTH_DP,
+                    availableHeight / REFERENCE_HEIGHT_DP,
+                )
+                CompositionLocalProvider(LocalDensity provides Density(scale, density.fontScale)) {
+                    // Height-limited screens leave side margins; the board stays 390 wide and centred.
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                        Box(Modifier.width(REFERENCE_WIDTH_DP.dp).fillMaxHeight()) {
+                            val catalog = app.catalog
+                            if (catalog == null) BrokenCatalogNotice() else Shooter(app, catalog)
+                        }
+                    }
+                }
             }
         }
     }

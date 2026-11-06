@@ -25,8 +25,9 @@ object PiankeType {
     )
 }
 
-/** Canvas v38 is drawn 390 dp wide; MainActivity scales the whole UI by providing one LocalDensity. */
+/** Canvas v38 is drawn 390 x 866 dp; MainActivity scales the whole UI by providing one LocalDensity. */
 const val REFERENCE_WIDTH_DP = 390f
+const val REFERENCE_HEIGHT_DP = 866f
 
 val Orange = Color(0xFFE8833A)
 val Ink = Color(0xFF1E1E1D)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The design has no title bar; the board draws edge to edge and handles insets itself. -->
+    <style name="Theme.Pianke" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/darker_gray</item>
+    </style>
+</resources>
