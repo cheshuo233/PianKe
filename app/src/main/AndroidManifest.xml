@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Normal permission (granted at install): haptic feedback. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".PiankeApp"
