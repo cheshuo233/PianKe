@@ -8,6 +8,7 @@
     <application
         android:name=".PiankeApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pianke">
         <activity
