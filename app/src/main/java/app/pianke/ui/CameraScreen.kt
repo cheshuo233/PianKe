@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -46,6 +48,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -84,7 +87,9 @@ fun CameraScreen(
     val context = LocalContext.current
     val front = state.settings.lens == Lens.FRONT
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.bodyBackground().windowInsetsPadding(WindowInsets.systemBars)) {
+        // Under the drawer the page is out of reach of touch (the scrim) and of TalkBack (here).
+        val page = if (state.drawer == Drawer.CLOSED) Modifier else Modifier.clearAndSetSemantics {}
+        Column(Modifier.bodyBackground().windowInsetsPadding(WindowInsets.systemBars).then(page)) {
             TopBar(
                 state.settings.frame, state.settings.flash, !front, state.counterShown, state.rewinding,
                 onOpenMenu, viewModel::cycleFlash,
@@ -116,10 +121,13 @@ fun CameraScreen(
             )
             Spacer(Modifier.height(14.dp))
         }
-        FilmDrawer(
-            films = state.films, filmIndex = state.filmIndex, drawer = state.drawer,
-            onStep = viewModel::drawerStep, onPick = viewModel::selectFilmAt, onClose = viewModel::closeDrawer,
-        )
+        // The drawer covers the physical screen, margins included: its scrim and touch blocker reach the dial's overhang.
+        Box(Modifier.requiredWidth(REFERENCE_WIDTH_DP.dp + LocalEdgeMargin.current * 2f).fillMaxHeight()) {
+            FilmDrawer(
+                films = state.films, filmIndex = state.filmIndex, drawer = state.drawer,
+                onStep = viewModel::drawerStep, onPick = viewModel::selectFilmAt, onClose = viewModel::closeDrawer,
+            )
+        }
     }
 }
 
@@ -140,7 +148,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView, onFocus: s
     val mask = if (square) 60.dp else 0.dp
     val scope = rememberCoroutineScope()
     var reticle by remember { mutableStateOf<Offset?>(null) }
-    var focused by remember { mutableStateOf<Boolean?>(null) }
+    var focused by remember { mutableStateOf(false) }
     var reticleAlpha by remember { mutableFloatStateOf(1f) }
     var focusJob by remember { mutableStateOf<Job?>(null) }
     val today = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("''yy MM dd")) }
@@ -160,7 +168,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView, onFocus: s
                     if (tap.y < band || tap.y > size.height - band) return@detectTapGestures
                     focusJob?.cancel()
                     reticle = tap
-                    focused = null
+                    focused = false
                     reticleAlpha = 1f
                     focusJob = scope.launch {
                         focused = onFocus(tap.x / size.width, tap.y / size.height)
@@ -213,7 +221,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView, onFocus: s
                 style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFFF3ECDD)),
             )
         }
-        // Rule 41: the dim while rewinding, fast in and slow out.
+        // §9.5: the dim while rewinding, fast in and slow out.
         val dim by animateFloatAsState(
             if (state.rewinding) 0.55f else 0f,
             tween(if (state.rewinding) 150 else 300),
@@ -235,7 +243,7 @@ private fun Viewfinder(state: ShooterUiState, preview: GLSurfaceView, onFocus: s
         reticle?.let { centre ->
             // §9.4: four corner brackets, 60dp square, 1.5dp stroke, 12dp arms; orange once focus succeeded.
             Canvas(Modifier.fillMaxSize()) {
-                val color = (if (focused == true) Color(0xFFF28C3A) else Color(0xFFF3ECDD)).copy(alpha = reticleAlpha)
+                val color = (if (focused) Color(0xFFF28C3A) else Color(0xFFF3ECDD)).copy(alpha = reticleAlpha)
                 val half = 30.dp.toPx()
                 val arm = 12.dp.toPx()
                 val stroke = 1.5.dp.toPx()

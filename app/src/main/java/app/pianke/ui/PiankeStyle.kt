@@ -36,8 +36,8 @@ const val REFERENCE_WIDTH_DP = 390f
 const val REFERENCE_HEIGHT_DP = 866f
 
 /**
- * How far the physical screen extends past the centred board on each side (height-limited screens). Only the film
- * row uses it, to put the dial's centre on the screen's right edge.
+ * How far the physical screen extends past the centred board on each side (height-limited screens). The film row
+ * uses it to put the dial's centre on the screen's right edge; the drawer and MENU use it to cover the whole screen.
  */
 val LocalEdgeMargin = compositionLocalOf { 0.dp }
 
@@ -45,7 +45,7 @@ val Orange = Color(0xFFE8833A)
 val Ink = Color(0xFF1E1E1D)
 val Bezel = Color(0xFF1B1B1A)
 
-/** The orange down-pointing marker over the zoom scale and the roll counter; 10 dp wide. */
+/** The orange down-pointing marker over the roll counter; 10 dp wide. */
 @Composable
 fun PointerTriangle(modifier: Modifier, height: Dp) {
     Canvas(modifier.size(10.dp, height)) {

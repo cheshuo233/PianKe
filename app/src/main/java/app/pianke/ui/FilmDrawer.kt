@@ -78,8 +78,8 @@ private const val CENTRE_DX = 300f
 private const val R_EDGE = 500f
 private const val R_LABEL = 416f
 private const val TRACK_HALF = 64f
-private const val STEP_RAD = (15.0 * PI / 180.0).toFloat()
 private const val STEP_DEG = 15f
+private const val STEP_RAD = (STEP_DEG * PI / 180.0).toFloat()
 private const val VISIBLE = 3
 
 private const val LABEL_W = 84f
@@ -99,19 +99,30 @@ private const val LABEL_RISE = 8f
 private const val NAME_TOP = CARD_H / 2 - LABEL_RISE + LABEL_H / 2 * (1 + FOCUS_SCALE) + 7f
 
 /** The drawer slides this far right to be fully out: its left edge, and its shadow, then lie past the screen edge. */
-private const val OUT_DP = 240f
+private const val OUT_DP = R_EDGE - CENTRE_DX + 40f
 private const val CLOSE_DISTANCE_DP = 64f
 private const val CLOSE_VELOCITY_DP = 1000f
 
 private val Cream = Color(0xFFF6F0E2)
 private val SlideSpec = spring<Float>(dampingRatio = 1f, stiffness = 450f)
 
+/** What a touch sequence in the drawer has turned into: a tap until it moves past the slop. */
+private enum class Gesture { UNDECIDED, WHEEL, CLOSE, IGNORED }
+
 /** Where a label is on the wheel, for wheel position [pos]: shared by drawing and hit-testing. */
 private class Pose(val x: Float, val y: Float, val theta: Float, val focus: Float)
 
+/** 1 at the wheel position, 0 one roll away: the outline, the name and the 1.12x scale follow it. */
+private fun focus(delta: Float): Float = (1f - abs(delta)).coerceIn(0f, 1f)
+
+private fun scale(focus: Float): Float = 1f + FOCUS_SCALE * focus
+
+/** The wheel's centre, [CENTRE_DX] right of the right edge at half the height, before any slide. */
+private fun centre(width: Float, height: Float, d: Float) = Offset(width + CENTRE_DX * d, height / 2f)
+
 private fun pose(k: Int, pos: Float, cx: Float, cy: Float, d: Float): Pose {
     val delta = k - pos
-    val focus = (1f - abs(delta)).coerceIn(0f, 1f)
+    val focus = focus(delta)
     val a = PI.toFloat() + delta * STEP_RAD
     val r = (R_LABEL + FOCUS_SHIFT * focus) * d
     return Pose(cx + r * cos(a), cy + r * sin(a), delta * STEP_RAD, focus)
@@ -124,7 +135,7 @@ private fun labelAt(p: Offset, pos: Float, cx: Float, cy: Float, d: Float): Int?
     var bestDistance = Float.MAX_VALUE
     for (k in centre - VISIBLE..centre + VISIBLE) {
         val ps = pose(k, pos, cx, cy, d)
-        val s = 1f + FOCUS_SCALE * ps.focus
+        val s = scale(ps.focus)
         val sn = sin(ps.theta)
         val cs = cos(ps.theta)
         // Into the label's own frame: shift to its centre, then undo the clockwise rotation.
@@ -178,7 +189,6 @@ fun FilmDrawer(
     val currentOnClose by rememberUpdatedState(onClose)
     val currentClosed by rememberUpdatedState(closed)
     val currentRequired by rememberUpdatedState(required)
-    val currentN by rememberUpdatedState(n)
 
     LaunchedEffect(closed) {
         if (closed) {
@@ -202,15 +212,23 @@ fun FilmDrawer(
     BackHandler(enabled = !closed) { onClose() }
 
     val shown by remember { derivedStateOf { slide.value < outPx - 0.5f } }
+    // Before the early return, so the decoded labels outlive the drawer's slide-out.
+    val labels = rememberLabels(films)
     if (closed && !shown) return
 
-    /** One `onStep` per change of the nearest roll, whether the finger or the animation moved the wheel. */
+    /** One `onStep` per change of the nearest roll, as the finger or a settling animation moves the wheel; a tapped pick's turn plays none. */
     fun report() {
         val r = position.value.roundToInt()
         if (r != lastRound.intValue) {
             lastRound.intValue = r
             currentOnStep()
         }
+    }
+
+    /** Rests the wheel on a whole roll, after a touch stopped it and did not pick. */
+    fun settle() {
+        val r = position.value.roundToInt().toFloat()
+        if (position.value != r) scope.launch { position.animateTo(r, spring(1f)) { report() } }
     }
 
     /** Turns the wheel to label [k] in about 200 ms, then picks it; a touch that stops the animation cancels the pick. */
@@ -222,12 +240,11 @@ fun FilmDrawer(
                 position.animateTo(k.toFloat(), tween(200, easing = FastOutSlowInEasing))
                 lastRound.intValue = k
             }
-            currentOnPick(Math.floorMod(k, currentN))
+            currentOnPick(Math.floorMod(k, n))
         }
     }
 
     val centreK by remember { derivedStateOf { position.value.roundToInt() } }
-    val labels = rememberLabels(films)
     val radiusLabel = R_LABEL * density
     val arcPerRoll = radiusLabel * STEP_RAD
 
@@ -236,19 +253,18 @@ fun FilmDrawer(
             while (true) {
                 awaitPointerEventScope {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val cx = size.width + CENTRE_DX * density + slide.value + swipe
-                    val cy = size.height / 2f
+                    val (x0, cy) = centre(size.width.toFloat(), size.height.toFloat(), density)
+                    val cx = x0 + slide.value + swipe
                     val inside = hypot(down.position.x - cx, down.position.y - cy) <= R_EDGE * density
                     val live = !currentClosed
-                    if (live && inside) scope.launch { position.stop() }
+                    val stopped = live && inside
+                    if (stopped) scope.launch { position.stop() }
                     val startPos = position.value
-                    val startAngle = atan2(down.position.y - cy, down.position.x - cx)
                     val tracker = VelocityTracker()
                     tracker.addPosition(down.uptimeMillis, down.position)
                     val slop = viewConfiguration.touchSlop
-                    // 0 undecided (a tap so far), 1 wheel, 2 swipe to close, 3 ignored
-                    var mode = 0
-                    var angle = startAngle
+                    var mode = Gesture.UNDECIDED
+                    var angle = atan2(down.position.y - cy, down.position.x - cx)
                     var turned = 0f
                     var last = down.position
                     while (true) {
@@ -259,17 +275,19 @@ fun FilmDrawer(
                         tracker.addPosition(change.uptimeMillis, last)
                         val dx = last.x - down.position.x
                         val dy = last.y - down.position.y
-                        if (mode == 0 && hypot(dx, dy) > slop) {
+                        if (mode == Gesture.UNDECIDED && hypot(dx, dy) > slop) {
                             val rightward = abs(dx) > abs(dy) && dx > 0
                             mode = when {
-                                !live || !inside -> 3
-                                rightward && currentRequired -> 3
-                                rightward -> 2
-                                else -> 1
+                                !live || !inside -> Gesture.IGNORED
+                                rightward && currentRequired -> Gesture.IGNORED
+                                rightward -> Gesture.CLOSE
+                                else -> Gesture.WHEEL
                             }
                         }
+                        // REQUIRED can arrive mid-swipe: the swipe then goes back (LaunchedEffect(required)) and the release does nothing.
+                        if (mode == Gesture.CLOSE && currentRequired) mode = Gesture.IGNORED
                         when (mode) {
-                            1 -> {
+                            Gesture.WHEEL -> {
                                 val now = atan2(last.y - cy, last.x - cx)
                                 var step = now - angle
                                 // The finger passes angle +-pi (straight left of the centre) every time it crosses the middle.
@@ -279,24 +297,26 @@ fun FilmDrawer(
                                 val target = startPos - turned / STEP_RAD
                                 scope.launch { position.snapTo(target); report() }
                             }
-                            2 -> swipe = dx.coerceAtLeast(0f)
+                            Gesture.CLOSE -> swipe = dx.coerceAtLeast(0f)
+                            else -> Unit
                         }
                         change.consume()
                     }
                     if (!live) return@awaitPointerEventScope
                     when (mode) {
-                        0 -> if (!inside) {
+                        Gesture.UNDECIDED -> if (!inside) {
                             currentOnClose()
                         } else {
-                            labelAt(last, position.value, cx, cy, density)?.let(::pick)
+                            val k = labelAt(last, position.value, cx, cy, density)
+                            if (k != null) pick(k) else settle()
                         }
-                        1 -> {
+                        Gesture.WHEEL -> {
                             // Angular speed of the finger about the centre, as arc length at the wheel radius.
                             val v = tracker.calculateVelocity()
                             val rx = last.x - cx
                             val ry = last.y - cy
                             val omega = (rx * v.y - ry * v.x) / (rx * rx + ry * ry).coerceAtLeast(1f)
-                            val rollsPerSecond = -omega * radiusLabel / arcPerRoll
+                            val rollsPerSecond = -omega / STEP_RAD
                             val from = startPos - turned / STEP_RAD
                             val landing = splineBasedDecay<Float>(this).calculateTargetValue(0f, -omega * radiusLabel)
                             val target = (from + landing / arcPerRoll).roundToInt().toFloat()
@@ -306,13 +326,15 @@ fun FilmDrawer(
                                 position.animateTo(target, spring(1f, 150f), speed) { report() }
                             }
                         }
-                        2 -> {
+                        Gesture.CLOSE -> {
                             if (swipe > CLOSE_DISTANCE_DP * density || tracker.calculateVelocity().x > CLOSE_VELOCITY_DP * density) {
                                 currentOnClose()
                             } else {
                                 scope.launch { animate(swipe, 0f, animationSpec = SlideSpec) { v, _ -> swipe = v } }
+                                settle()
                             }
                         }
+                        Gesture.IGNORED -> if (stopped) settle()
                     }
                 }
             }
@@ -326,10 +348,7 @@ fun FilmDrawer(
         )
         // The drawer: one layer, slid as a whole.
         BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { translationX = slide.value + swipe }) {
-            val widthPx = constraints.maxWidth.toFloat()
-            val heightPx = constraints.maxHeight.toFloat()
-            val cx = widthPx + CENTRE_DX * density
-            val cy = heightPx / 2f
+            val (cx, cy) = centre(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat(), density)
             DrawerPanel()
             for (k in centreK - VISIBLE..centreK + VISIBLE) {
                 val film = films[Math.floorMod(k, n)]
@@ -347,9 +366,9 @@ fun FilmDrawer(
                     val labelCentreY = CARD_H / 2 - LABEL_RISE
                     // The current roll's outline, drawn at the label's size and fading with its distance from the middle.
                     Canvas(Modifier.fillMaxSize()) {
-                        val focus = (1f - abs(k - position.value)).coerceIn(0f, 1f)
+                        val focus = focus(k - position.value)
                         if (focus > 0f) {
-                            val s = 1f + FOCUS_SCALE * focus
+                            val s = scale(focus)
                             val w = (LABEL_W * s + 2 * OUTLINE_PAD) * density
                             val h = (LABEL_H * s + 2 * OUTLINE_PAD) * density
                             val inset = OUTLINE_STROKE / 2 * density
@@ -368,7 +387,7 @@ fun FilmDrawer(
                             .offset(((CARD_W - LABEL_W) / 2).dp, (labelCentreY - LABEL_H / 2).dp)
                             .size(LABEL_W.dp, LABEL_H.dp)
                             .graphicsLayer {
-                                val s = 1f + FOCUS_SCALE * (1f - abs(k - position.value)).coerceIn(0f, 1f)
+                                val s = scale(focus(k - position.value))
                                 scaleX = s
                                 scaleY = s
                             }
@@ -383,7 +402,7 @@ fun FilmDrawer(
                     BasicText(
                         film.name.uppercase(),
                         modifier = Modifier.align(Alignment.TopCenter).offset(y = NAME_TOP.dp)
-                            .graphicsLayer { alpha = (1f - abs(k - position.value)).coerceIn(0f, 1f) },
+                            .graphicsLayer { alpha = focus(k - position.value) },
                         style = TextStyle(
                             color = Cream, fontSize = 11.sp, fontFamily = PiankeType.Plex, fontWeight = FontWeight.Medium,
                         ),
@@ -408,7 +427,7 @@ fun FilmDrawer(
 private fun DrawerPanel() {
     Canvas(Modifier.fillMaxSize()) {
         val d = density
-        val c = Offset(size.width + CENTRE_DX * d, size.height / 2f)
+        val c = centre(size.width, size.height, d)
         val edge = R_EDGE * d
         val wheel = R_LABEL * d
         val blur = 28f * d
