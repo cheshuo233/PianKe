@@ -11,6 +11,8 @@ object ZoomScale {
     /** The 23 mm main lens is ratio 1; every back ratio is mm / MAIN_MM, written only here. */
     const val MAIN_MM = 23f
 
+    private const val START_TOLERANCE_MM = 1e-3f
+
     /** mm -> ratio. */
     fun ratio(mm: Float): Float = mm / MAIN_MM
 
@@ -28,10 +30,11 @@ object ZoomScale {
 
     /** Rule 27: the tick passed or reached going from [fromMm] to [toMm] (a marked one first), not the one at the start. */
     fun crossed(fromMm: Float, toMm: Float, ticks: List<Tick>): Tick? {
-        val counted = when {
-            toMm > fromMm -> ticks.filter { it.mm > fromMm && it.mm <= toMm }
-            toMm < fromMm -> ticks.filter { it.mm >= toMm && it.mm < fromMm }
-            else -> emptyList()
+        // A tick within START_TOLERANCE_MM of fromMm is the start: mm(ratio(28f)) is 27.999998 in float.
+        val counted = if (toMm > fromMm) {
+            ticks.filter { it.mm > fromMm + START_TOLERANCE_MM && it.mm <= toMm }
+        } else {
+            ticks.filter { it.mm >= toMm && it.mm < fromMm - START_TOLERANCE_MM }
         }
         return counted.firstOrNull { it.marked } ?: counted.firstOrNull()
     }

@@ -86,7 +86,7 @@ class ShooterViewModel(
     /** Set and cleared together with [camera]; [focusAt] needs it for `viewToFrame`. */
     private var renderer: PreviewRenderer? = null
 
-    /** True from the press until `capture` returns. Main thread only. */
+    /** True from the press until the shot is committed and counted (submitted or released); it also guards the ritual's rewind start. Main thread only. */
     private var capturing = false
 
     private var lcdJob: Job? = null
@@ -164,7 +164,7 @@ class ShooterViewModel(
                 launch {
                     _state.map { it.settings.zoomMode }.distinctUntilChanged().collect { mode ->
                         val s = _state.value
-                        if (mode == ZoomMode.STOPS && s.stops.isNotEmpty() && s.stop == null) {
+                        if (mode == ZoomMode.STOPS && s.stops.isNotEmpty() && s.stop?.ratio != s.zoomRatio) {
                             applyZoom(ZoomScale.nearest(s.stops, s.zoomRatio).ratio)
                         }
                     }
@@ -304,8 +304,9 @@ class ShooterViewModel(
                             }
                             // `capturing` is still true here, so setting `rewinding` first leaves no gap for a press.
                             val ritual = _state.value.settings.ritual
-                            val rewinds = advanced && rewound && ritual != Ritual.OFF
-                            if (advanced && ritual != Ritual.OFF) cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
+                            val performs = advanced && ritual != Ritual.OFF
+                            val rewinds = performs && rewound
+                            if (performs) cue(if (rewound) Cue.REWIND else Cue.ADVANCE)
                             if (rewinds) _state.update { it.copy(rewinding = true) }
                             queue.submit(shot)
                             submitted = true

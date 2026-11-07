@@ -52,6 +52,9 @@ private val Light = Color(0xFFE8E4DA)
 private val TickColor = Color(0xFFD6D3CA)
 private val Faint = Color(0xFF787670)
 
+/** Rule 39: the drum scale, ln unit to dp, used by both the drag and the drawing. */
+private val PerLn = 120.dp
+
 /** The drum's position as ln(mm). [busy] holds off the follow-the-ratio sync while a drag or the release snap runs. */
 private class Drum(initial: Float) {
     var posLn by mutableFloatStateOf(initial)
@@ -95,7 +98,7 @@ fun ZoomStrip(
     val onZoomNow by rememberUpdatedState(onZoom)
     val scope = rememberCoroutineScope()
     val drag = if (locked) Modifier else Modifier.pointerInput(stops, mode) {
-        val perLn = 120.dp.toPx()
+        val perLn = PerLn.toPx()
         val lo = ln(stops.first().mm.toFloat())
         val hi = ln(stops.last().mm.toFloat())
         var startLn = 0f
@@ -113,32 +116,42 @@ fun ZoomStrip(
                 drum.busy = false
             }
         }
-        detectHorizontalDragGestures(
-            onDragStart = {
-                drum.job?.cancel()
-                drum.busy = true
-                startLn = drum.posLn
-                dx = 0f
-                last = null
-            },
-            onDragEnd = { release() },
-            onDragCancel = { release() },
-            onHorizontalDrag = { _, delta ->
-                // The drum follows the finger: dragging right brings shorter focal lengths in from the left.
-                dx += delta
-                drum.posLn = (startLn - dx / perLn).coerceIn(lo, hi)
-                val dragRatio = ZoomScale.ratio(exp(drum.posLn))
-                if (mode == ZoomMode.STOPS) {
-                    val stop = ZoomScale.nearest(stops, dragRatio)
-                    if (stop !== last) {
-                        last = stop
-                        onZoomNow(stop.ratio)
+        try {
+            detectHorizontalDragGestures(
+                onDragStart = {
+                    drum.job?.cancel()
+                    drum.busy = true
+                    startLn = drum.posLn
+                    dx = 0f
+                    last = null
+                },
+                onDragEnd = { release() },
+                onDragCancel = { release() },
+                onHorizontalDrag = { _, delta ->
+                    // The drum follows the finger: dragging right brings shorter focal lengths in from the left.
+                    dx += delta
+                    drum.posLn = (startLn - dx / perLn).coerceIn(lo, hi)
+                    // At the clamp the end stop's own ratio goes out, so the end NOTCH does not hang on float rounding.
+                    val dragRatio = when (drum.posLn) {
+                        lo -> stops.first().ratio
+                        hi -> stops.last().ratio
+                        else -> ZoomScale.ratio(exp(drum.posLn))
                     }
-                } else {
-                    onZoomNow(dragRatio)
-                }
-            },
-        )
+                    if (mode == ZoomMode.STOPS) {
+                        val stop = ZoomScale.nearest(stops, dragRatio)
+                        if (stop !== last) {
+                            last = stop
+                            onZoomNow(stop.ratio)
+                        }
+                    } else {
+                        onZoomNow(dragRatio)
+                    }
+                },
+            )
+        } finally {
+            // A pointerInput restart cancels the detector without onDragCancel; a running release snap keeps its hold.
+            if (drum.job?.isActive != true) drum.busy = false
+        }
     }
 
     val shape = RoundedCornerShape(10.dp)
@@ -163,11 +176,11 @@ fun ZoomStrip(
         drawRoundRect(Color(0xFF1E1E1D), Offset(wx - dp, wy - dp), Size(ww + 2 * dp, wh + 2 * dp), CornerRadius(6 * dp))
 
         val window = Path().apply { addRoundRect(RoundRect(wx, wy, wx + ww, wy + wh, CornerRadius(5 * dp))) }
+        val cx = wx + ww / 2
         clipPath(window) {
             drawRect(Color(0xFF2C2B29), Offset(wx, wy), Size(ww, wh))
-            val cx = wx + ww / 2
             for (tick in ticks) {
-                val x = cx + 120 * dp * (ln(tick.mm.toFloat()) - drum.posLn)
+                val x = cx + PerLn.toPx() * (ln(tick.mm.toFloat()) - drum.posLn)
                 if (x < wx - 20 * dp || x > wx + ww + 20 * dp) continue
                 val len = (if (tick.marked) 9 else 6) * dp
                 drawLine(TickColor, Offset(x, wy), Offset(x, wy + len), (if (tick.marked) 0.9f else 0.6f) * dp)
@@ -192,9 +205,8 @@ fun ZoomStrip(
         }
 
         // The fixed index below the window, then the readouts on the frame.
-        val ix = wx + ww / 2
         drawPath(
-            Path().apply { moveTo(ix, 39 * dp); lineTo(ix - 3 * dp, 44 * dp); lineTo(ix + 3 * dp, 44 * dp); close() },
+            Path().apply { moveTo(cx, 39 * dp); lineTo(cx - 3 * dp, 44 * dp); lineTo(cx + 3 * dp, 44 * dp); close() },
             Color(0xFF3C3B38),
         )
         drawText(readout, Color(0xFFCE3228), Offset(14 * dp, 12 * dp))
