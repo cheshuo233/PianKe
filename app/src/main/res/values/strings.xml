@@ -43,6 +43,7 @@
     <string name="lcd_storage_full">存储已满</string>
     <string name="lcd_rewind">REWIND</string>
     <string name="film_pick_desc">换成 %1$s</string>
+    <string name="film_current_desc">%1$s，打开换卷抽屉</string>
     <string name="film_prev_desc">上一卷</string>
     <string name="film_next_desc">下一卷</string>
 

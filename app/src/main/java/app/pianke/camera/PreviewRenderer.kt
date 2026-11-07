@@ -212,7 +212,7 @@ class PreviewRenderer : GLSurfaceView.Renderer {
 
     /**
      * Rule 33: view-normalised ([x], [y]) -> the frame coordinates `CameraController.focusAt` takes, using the same
-     * the same factors as the shader: null while [crop] is null, otherwise reads only [crop]. Main thread.
+     * factors as the shader: null while [crop] is null, otherwise reads only [crop]. Main thread.
      */
     fun viewToFrame(x: Float, y: Float): PointF? {
         val c = crop ?: return null

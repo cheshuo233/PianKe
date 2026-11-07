@@ -68,21 +68,20 @@ class Feedback(context: Context) {
         Cue.ADVANCE -> tremor(pulses = 6, onMs = 30L, offMs = 20L)      // about 0.3 s
         Cue.REWIND -> tremor(pulses = 9, onMs = 40L, offMs = 30L)       // about 0.63 s
         Cue.REFUSE -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK)
-        Cue.TICK -> when {
-            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK) ->
-                VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.4f).compose()
-            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK) ->
-                VibrationEffect.startComposition().addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.25f).compose()
-            else -> null
-        }
+        Cue.TICK -> primitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.4f)
+            ?: primitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.25f)
     }
 
-    private fun primitiveOr(primitive: Int, fallback: Int): VibrationEffect =
-        if (vibrator.areAllPrimitivesSupported(primitive)) {
-            VibrationEffect.startComposition().addPrimitive(primitive).compose()
+    /** The one place that asks whether the device supports a primitive; null when it does not. */
+    private fun primitive(id: Int, scale: Float = 1f): VibrationEffect? =
+        if (vibrator.areAllPrimitivesSupported(id)) {
+            VibrationEffect.startComposition().addPrimitive(id, scale).compose()
         } else {
-            VibrationEffect.createPredefined(fallback)
+            null
         }
+
+    private fun primitiveOr(id: Int, fallback: Int): VibrationEffect =
+        primitive(id) ?: VibrationEffect.createPredefined(fallback)
 
     private fun tremor(pulses: Int, onMs: Long, offMs: Long): VibrationEffect {
         val timings = LongArray(pulses * 2) { if (it % 2 == 0) offMs else onMs }

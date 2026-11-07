@@ -2,39 +2,36 @@ package app.pianke.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.stateDescription
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,10 +45,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +65,8 @@ import app.pianke.settings.Ritual
 import app.pianke.settings.Settings
 import app.pianke.settings.SoundVolume
 import app.pianke.settings.ZoomMode
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 private val CardInk = Color(0xFF2E2A26)
 private val CardMuted = Color(0xFF6E665A)
@@ -82,39 +85,45 @@ fun MenuScreen(settings: Settings, shutterSoundForced: Boolean, onUpdate: ((Sett
     val context = LocalContext.current
     val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty() }
 
-    Column(
-        Modifier.bodyBackground().pointerInput(Unit) {}.windowInsetsPadding(WindowInsets.systemBars)
-            .padding(start = 18.dp, end = 18.dp, bottom = 24.dp),
+    // The touch blocker spans the physical screen, so the dial's overhang in the side margins is out of reach too.
+    Box(
+        Modifier.requiredWidth(REFERENCE_WIDTH_DP.dp + LocalEdgeMargin.current * 2f).fillMaxHeight().pointerInput(Unit) {},
+        contentAlignment = Alignment.Center,
     ) {
-        Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            val closeDescription = stringResource(if (about) R.string.about_back_desc else R.string.menu_close_desc)
-            Box(
-                Modifier.size(40.dp).shadow(4.dp, CircleShape).clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFECE9E3), Color(0xFFD7D3CC))))
-                    .clickable(role = Role.Button, onClick = back)
-                    .semantics { contentDescription = closeDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(Modifier.size(14.dp)) {
-                    val stroke = 2.2.dp.toPx()
-                    drawLine(Color(0xFF4A453F), Offset(size.width * 0.25f, size.height * 0.25f), Offset(size.width * 0.75f, size.height * 0.75f), stroke, StrokeCap.Round)
-                    drawLine(Color(0xFF4A453F), Offset(size.width * 0.75f, size.height * 0.25f), Offset(size.width * 0.25f, size.height * 0.75f), stroke, StrokeCap.Round)
+        Column(
+            Modifier.width(REFERENCE_WIDTH_DP.dp).bodyBackground().windowInsetsPadding(WindowInsets.systemBars)
+                .padding(start = 18.dp, end = 18.dp, bottom = 24.dp),
+        ) {
+            Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                val closeDescription = stringResource(if (about) R.string.about_back_desc else R.string.menu_close_desc)
+                Box(
+                    Modifier.size(40.dp).shadow(4.dp, CircleShape).clip(CircleShape)
+                        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFECE9E3), Color(0xFFD7D3CC))))
+                        .clickable(role = Role.Button, onClick = back)
+                        .semantics { contentDescription = closeDescription },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(Modifier.size(14.dp)) {
+                        val stroke = 2.2.dp.toPx()
+                        drawLine(Color(0xFF4A453F), Offset(size.width * 0.25f, size.height * 0.25f), Offset(size.width * 0.75f, size.height * 0.75f), stroke, StrokeCap.Round)
+                        drawLine(Color(0xFF4A453F), Offset(size.width * 0.75f, size.height * 0.25f), Offset(size.width * 0.25f, size.height * 0.75f), stroke, StrokeCap.Round)
+                    }
                 }
             }
-        }
-        Column(
-            Modifier.padding(top = 6.dp).weight(1f).fillMaxWidth().shadow(8.dp, RoundedCornerShape(10.dp))
-                .background(Color(0xFFFBF9F5), RoundedCornerShape(10.dp))
-                .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (about) {
-                About(version)
-            } else {
-                Header(stringResource(R.string.menu_title))
-                Groups(settings, shutterSoundForced, version, onUpdate, openAbout = { about = true })
-                Box(Modifier.weight(1f))
-                Footer(version)
+            Column(
+                Modifier.padding(top = 6.dp).weight(1f).fillMaxWidth().shadow(8.dp, RoundedCornerShape(10.dp))
+                    .background(Color(0xFFFBF9F5), RoundedCornerShape(10.dp))
+                    .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (about) {
+                    About(version)
+                } else {
+                    Header(stringResource(R.string.menu_title))
+                    Groups(settings, shutterSoundForced, version, onUpdate, openAbout = { about = true })
+                    Box(Modifier.weight(1f))
+                    Footer(version)
+                }
             }
         }
     }
@@ -200,48 +209,56 @@ private fun RitualRow(ritual: Ritual, onUpdate: ((Settings) -> Settings) -> Unit
     val name = stringResource(R.string.menu_ritual)
     val labels = listOf(R.string.menu_ritual_off, R.string.menu_ritual_medium, R.string.menu_ritual_high).map { stringResource(it) }
     val knobSize = 24.dp
-    val travel = 126.dp // the knob's left edge runs this far across the 150 dp track, 0..2 detents
+    val track = 150.dp
+    val travel = track - knobSize // the knob's left edge runs this far across the track, 0..2 detents
     val travelPx = with(LocalDensity.current) { travel.toPx() }
     val knob = remember { Animatable(ritual.ordinal.toFloat()) } // in detent units, 0..2
     var drag by remember { mutableStateOf<Float?>(null) }
     var last by remember { mutableIntStateOf(ritual.ordinal) } // the detent last reported, so one drag reports each change once
     val scope = rememberCoroutineScope()
     LaunchedEffect(ritual) {
-        last = ritual.ordinal
-        if (drag == null) knob.animateTo(ritual.ordinal.toFloat())
+        // A stored value that lags behind a drag in progress must not overwrite what the finger has reported.
+        if (drag == null) {
+            last = ritual.ordinal
+            knob.animateTo(ritual.ordinal.toFloat())
+        }
     }
     fun choose(detent: Int) {
         if (detent == last) return
         last = detent
         onUpdate { it.copy(ritual = Ritual.entries[detent]) }
     }
+    /** Hands the knob from the finger back to the detent [to]. */
+    fun settle(to: Int) {
+        scope.launch {
+            knob.snapTo(drag ?: knob.value)
+            drag = null
+            knob.animateTo(to.toFloat())
+        }
+    }
+    fun jump(detent: Int) {
+        choose(detent)
+        scope.launch { knob.animateTo(detent.toFloat()) }
+    }
     val position = drag ?: knob.value
     Row(
         Modifier.fillMaxWidth().height(60.dp)
-            .clearAndSetSemantics { contentDescription = name; stateDescription = labels[ritual.ordinal] },
+            .clearAndSetSemantics {
+                contentDescription = name
+                stateDescription = labels[ritual.ordinal]
+                // TalkBack: activating the row steps 关 -> 中 -> 高 -> 关.
+                onClick { jump((ritual.ordinal + 1) % labels.size); true }
+            },
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
     ) {
         BasicText(name, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, color = CardInk))
-        Column(Modifier.width(150.dp)) {
+        Column(Modifier.width(track)) {
             Box(
                 Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { drag = knob.value },
-                        onDragEnd = {
-                            val end = (drag ?: knob.value).roundToInt()
-                            scope.launch {
-                                knob.snapTo(drag ?: knob.value)
-                                drag = null
-                                knob.animateTo(end.toFloat())
-                            }
-                        },
-                        onDragCancel = {
-                            scope.launch {
-                                knob.snapTo(drag ?: knob.value)
-                                drag = null
-                                knob.animateTo(last.toFloat())
-                            }
-                        },
+                        onDragEnd = { settle((drag ?: knob.value).roundToInt()) },
+                        onDragCancel = { settle(last) },
                     ) { change, delta ->
                         change.consume()
                         val next = ((drag ?: knob.value) + delta / (travelPx / 2f)).coerceIn(0f, 2f)
@@ -261,7 +278,7 @@ private fun RitualRow(ritual: Ritual, onUpdate: ((Settings) -> Settings) -> Unit
                 labels.forEachIndexed { index, label ->
                     Box(
                         Modifier.offset(travel * (index / 2f), 0.dp).width(knobSize).height(18.dp)
-                            .clickable { choose(index); scope.launch { knob.animateTo(index.toFloat()) } },
+                            .clickable { jump(index) },
                         contentAlignment = Alignment.Center,
                     ) {
                         BasicText(label, style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, color = if (index == ritual.ordinal) CardInk else CardMuted))

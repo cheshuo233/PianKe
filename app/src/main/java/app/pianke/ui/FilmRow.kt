@@ -133,7 +133,7 @@ internal fun rememberLabels(films: List<Film>): Map<String, ImageBitmap> {
  * step. The window clips them to the arc band, so only the current label shows fully and the neighbours' corners peek
  * in at the tips. Window drag [WINDOW_STEP_DP] / dial drag [DIAL_STEP_DP] per step, snapping on release; tap a visible
  * neighbour or a dial half -> [onSelect] with +1 / -1; the list wraps. Each crossed step calls [onSelect] with +1 or -1
- * (the ViewModel plays NOTCH and switches the LUT). A tap on the current label calls [onOpen] (the film drawer). Labels are loaded from `film.labelAsset` once and cached by id.
+ * (the ViewModel plays NOTCH and switches the LUT). A tap on the current label calls [onOpen] (the film drawer). Label bitmaps come from `rememberLabels`.
  */
 @Composable
 fun FilmRow(
@@ -236,7 +236,7 @@ fun FilmRow(
                 // Beyond 1.5 steps a label is fully clipped by the window.
                 if (a <= 1.5f && bitmap != null) {
                     val neighbour = a >= 0.5f
-                    val pick = stringResource(R.string.film_pick_desc, film.name)
+                    val description = stringResource(if (neighbour) R.string.film_pick_desc else R.string.film_current_desc, film.name)
                     val brightness = 1f - 0.3f * minOf(a, 1f)
                     Image(
                         bitmap, contentDescription = null, contentScale = ContentScale.FillBounds,
@@ -252,7 +252,7 @@ fun FilmRow(
                             }
                             .border(1.dp, Color(0x29FFFFFF), RoundedCornerShape(2.dp))
                             .clickable(role = Role.Button) { if (neighbour) tapStep(if (d > 0) 1 else -1) else onOpen() }
-                            .semantics { if (neighbour) contentDescription = pick },
+                            .semantics { contentDescription = description },
                     )
                 }
             }
